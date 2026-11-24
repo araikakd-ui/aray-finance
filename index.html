@@ -104,6 +104,12 @@
   .rep tr.h td { font-size: 12px; color: var(--hint); text-transform: uppercase; letter-spacing: .03em; border-top: 0; padding-top: 14px; }
   .rep tr.sub td:first-child { padding-left: 12px; }
   .over { color: var(--bad); } .under { color: var(--ok); }
+  .dv { font-size: 11px; font-weight: 500; margin-top: 2px; }
+  .rep td { word-break: normal; }
+  .rep { font-size: 12px; }
+  .rep td.n { font-size: 11.5px; padding-left: 2px; padding-right: 2px; }
+  .rep .dv { font-size: 10px; }
+  .rep td:first-child { width: auto; }
   .kv { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; }
   .kv:first-child { border-top: 0; }
   .alert { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 14px; }
@@ -163,10 +169,11 @@ function showNoAccess(j) {
 $nav.addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.tab); });
 function go(tab) {
   TAB = tab; CUR = null;
-  [...$nav.children].forEach(b => b.classList.toggle('on', b.dataset.tab === (tab === 'upload' ? 'docs' : tab)));
+  [...$nav.children].forEach(b => b.classList.toggle('on', b.dataset.tab === (tab === 'upload' || tab === 'manual' ? 'docs' : tab)));
   if (tg) tg.BackButton.hide();
   if (tab === 'home') renderHome();
   if (tab === 'upload') { renderUpload(); if (tg) tg.BackButton.show(); }
+  if (tab === 'manual') { renderManual(); if (tg) tg.BackButton.show(); }
   if (tab === 'docs') renderDocs();
   if (tab === 'reports') renderReports();
   if (tab === 'buy') renderBuy();
@@ -179,6 +186,7 @@ const MSHORT = ['янв','фев','мар','апр','май','июн','июл','
 function mLabel(k) { const [y, m] = k.split('-'); return MSHORT[Number(m) - 1] + ' ' + y; }
 function mDiff(a, b) { const [ay, am] = a.split('-').map(Number), [by, bm] = b.split('-').map(Number); return (by - ay) * 12 + (bm - am); }
 function tg0(n) { return money(Math.round(n || 0)); }
+function nb(n) { return money(Math.round(n || 0)).replace(' ₸', ''); }
 function pct(a, b) { return b ? Math.round((a - b) / Math.abs(b) * 100) : null; }
 
 async function renderReports() {
@@ -231,8 +239,21 @@ function drawReports() {
     if (l.grp === 'Выручка') { if (p > 0 && d < -Math.max(20000, p * 0.05)) alerts.push({ t: l.name + ': ниже плана', d }); }
     else if (l.grp !== 'Амортизация и налог' && d > Math.max(10000, p * 0.1)) alerts.push({ t: l.name, d });
   });
+  // Меруерт сделала меньше услуг, чем по плану (её клиентов взяли наёмные или клиентов меньше)
+  const ownL = R.lines.find(l => l.sec === 'Собственница' && l.grp === 'Услуги');
+  if (hasFact && ownL) {
+    const f = sumRange(ownL.fact, factIdx) || 0, p = sumRange(ownL.plan, factIdx) || 0;
+    if (p && f < p - Math.max(50000, p * 0.05)) alerts.push({ t: 'Услуги Меруерт: ниже плана', d: f - p });
+  }
   alerts.sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
-  const row = (name, f, p, cls, isRev) => `<tr class="${cls || ''}"><td>${esc(name)}</td><td class="n">${hasFact ? tg0(f) : 'нет факта'}</td><td class="n muted">${tg0(p)}</td><td class="n">${dev(f, p, isRev)}</td></tr>`;
+  const devS = (f, p, isRev) => {
+    if (!hasFact || !p) return '';
+    const d = f - p, k = pct(f, p);
+    if (Math.abs(d) < 1) return '';
+    const bad = isRev ? d < 0 : d > 0;
+    return `<span class="${bad ? 'over' : 'under'}">${d > 0 ? '+' : ''}${nb(d)}${k !== null ? `<div class="dv">${k > 0 ? '+' : ''}${k}%</div>` : ''}</span>`;
+  };
+  const row = (name, f, p, cls, isRev) => `<tr class="${cls || ''}"><td>${esc(name)}</td><td class="n">${hasFact ? nb(f) : ''}</td><td class="n muted">${nb(p)}</td><td class="n">${devS(f, p, isRev)}</td></tr>`;
   const grpRows = (grp, isRev) => pl.filter(l => l.grp === grp).sort((a, b) => a.order - b.order)
     .filter(l => Math.abs(val(l, 'f')) + Math.abs(val(l, 'p')) > 0)
     .map(l => row(l.name, val(l, 'f'), val(l, 'p'), 'sub', isRev)).join('');
@@ -296,7 +317,7 @@ function drawReports() {
 
     <h2>Прибыли и убытки (ОПиУ) · ${esc(period)}</h2>
     <div class="card" style="padding:10px"><table class="rep"><tbody>
-      <tr class="h"><td></td><td class="n">Факт</td><td class="n">План</td><td class="n">Откл.</td></tr>
+      <tr class="h"><td>₸</td><td class="n">Факт</td><td class="n">План</td><td class="n">Откл.</td></tr>
       ${grpRows('Выручка', true)}
       ${row('Выручка', F.rev, P.rev, 'g', true)}
       ${grpRows('Переменные')}
@@ -546,7 +567,7 @@ async function renderBuy() {
     <div class="chips">${groups.map(([k, t]) => `<button class="chip ${k === BUYF ? 'on' : ''}" data-bf="${k}">${t} ${cnt(k)}</button>`).join('')}</div>
     <div class="card" style="padding:6px 14px">${list.length ? list.map(x => `
       <div class="lowitem"><span>${esc(x.title)}</span>
-        <span class="${cls[grp(x)]}" style="white-space:nowrap">${x.stock === null ? 'нет данных' : esc(x.stock) + ' ' + esc(x.unit)}${x.min ? ` <span class="muted">(мин. ${esc(x.min)})</span>` : ''}</span></div>`).join('')
+        <span class="${cls[grp(x)]}" style="white-space:nowrap">${x.stock === null ? 'нет данных' : esc(x.stock) + ' ' + esc(unitRu(x.unit))}${x.min ? ` <span class="muted">(мин. ${esc(x.min)})</span>` : ''}</span></div>`).join('')
       : '<div class="muted" style="padding:8px 0">Пусто</div>'}</div>
     <div class="notes">Заказ поставщику (как в видео) появится после инвентаризации: сейчас часть остатков в Altegio в минусе, а поставщики в Altegio не заведены. Минимальный остаток задаётся в карточке товара Altegio.</div>
     <div class="muted" style="margin:8px 6px">Обновлено из Altegio: ${esc(r.synced || 'ещё не загружали')}</div>
@@ -559,6 +580,36 @@ async function renderBuy() {
     catch (e) { toast(e.message); sync.disabled = false; sync.textContent = 'Обновить из Altegio'; }
   };
 }
+
+// ====== Расход без чека (форма) ======
+function renderManual() {
+  const today = new Date(), d = String(today.getDate()).padStart(2, '0') + '.' + String(today.getMonth() + 1).padStart(2, '0') + '.' + today.getFullYear();
+  $app.innerHTML = `
+    <h1>Расход без чека</h1>
+    <div class="card" id="mform">
+      <label class="f"><span>На что потратили</span><input name="description" placeholder="например: такси за товаром"></label>
+      <div class="grid2">
+        <label class="f"><span>Сумма, ₸</span><input name="amount" inputmode="decimal" placeholder="2500"></label>
+        <label class="f"><span>Дата (ДД.ММ.ГГГГ)</span><input name="date" value="${d}" inputmode="numeric"></label>
+      </div>
+      <label class="f"><span>Статья</span><select name="category"><option value="">выберите</option>${ME.cats.map(c => `<option>${esc(c)}</option>`).join('')}</select></label>
+      <label class="f"><span>Оплата</span><select name="payment">${ME.payments.map(p => `<option>${esc(p)}</option>`).join('')}</select></label>
+      <label class="f"><span>У кого (необязательно)</span><input name="counterparty" placeholder="магазин, человек"></label>
+      <div class="btns"><button class="btn" id="msave">Сохранить на проверку</button></div>
+    </div>
+    <div class="muted" style="padding:0 6px">Быстрее: напишите расход текстом в чат бота, например «вода 1800 каспи». Если есть чек, лучше отправить фото.</div>`;
+  document.getElementById('msave').onclick = async () => {
+    const f = {}; document.querySelectorAll('#mform [name]').forEach(el => f[el.name] = el.value.trim());
+    if (!f.description) return toast('Напишите, на что потратили');
+    if (!(Number(String(f.amount).replace(/\s/g, '').replace(',', '.')) > 0)) return toast('Укажите сумму');
+    if (!f.category) return toast('Выберите статью');
+    const b = document.getElementById('msave'); b.disabled = true; b.textContent = 'Сохраняю…';
+    try { const doc = await api('manual', f); haptic('success'); toast('Записано: ' + doc.id); openDoc(doc.id); }
+    catch (e) { if (e.message !== 'no_access') { haptic('error'); toast(e.message); b.disabled = false; b.textContent = 'Сохранить на проверку'; } }
+  };
+}
+const UNIT_RU = { pc: 'шт', pcs: 'шт', piece: 'шт', pieces: 'шт', ml: 'мл', l: 'л', g: 'г', gr: 'г', kg: 'кг', m: 'м', cm: 'см', pack: 'уп', box: 'кор', set: 'набор', pair: 'пара' };
+function unitRu(u) { const k = String(u || '').trim().toLowerCase().replace(/\.$/, ''); return UNIT_RU[k] || u || ''; }
 
 // ====== Сводка ======
 async function renderHome() {
@@ -629,7 +680,10 @@ function docRow(d) {
   const quick = ME.user.approver && d.status === 'На проверке';
   return quick ? `<div class="docrow">${docCard(d)}<button class="qa" data-qa="${esc(d.id)}" title="Утвердить">✓</button></div>` : docCard(d);
 }
-function bindUpload() { $app.querySelectorAll('[data-up]').forEach(b => b.onclick = () => go('upload')); }
+function bindUpload() {
+  $app.querySelectorAll('[data-up]').forEach(b => b.onclick = () => go('upload'));
+  $app.querySelectorAll('[data-man]').forEach(b => b.onclick = () => go('manual'));
+}
 function bindDocCards() {
   bindUpload();
   $app.querySelectorAll('.doc[data-id]').forEach(c => c.onclick = () => openDoc(c.dataset.id));
@@ -737,7 +791,7 @@ function docPeriod() {
 async function renderDocs() {
   const filters = ['На проверке', 'Утверждён', 'Отклонён', 'Ошибка распознавания', 'Все'];
   const p = docPeriod();
-  $app.innerHTML = `<div class="row"><h1>Документы</h1><button class="btn" data-up style="width:auto;padding:9px 14px;font-size:14px">📷 Загрузить</button></div>
+  $app.innerHTML = `<div class="row"><h1>Документы</h1><div style="display:flex;gap:6px"><button class="btn sec" data-man style="width:auto;padding:9px 12px;font-size:14px">✍️ Без чека</button><button class="btn" data-up style="width:auto;padding:9px 12px;font-size:14px">📷 Загрузить</button></div></div>
     <div class="chips">${[['week', 'Неделя'], ['month', 'Месяц'], ['all', 'Всё время']].map(([k, t]) => `<button class="chip ${k === DPER ? 'on' : ''}" data-p="${k}">${t}</button>`).join('')}</div>
     ${DPER !== 'all' ? `<div class="row" style="margin:0 2px 8px"><div class="monthsw"><button data-o="-1">‹</button><b>${esc(p.label)}</b><button data-o="1" ${DOFF >= 0 ? 'disabled' : ''}>›</button></div></div>` : ''}
     <div class="chips">${filters.map(f => `<button class="chip ${f === DOCFILTER ? 'on' : ''}" data-f="${f}">${f}</button>`).join('')}</div>
@@ -801,13 +855,13 @@ function renderDoc(d) {
     <div class="card"><table><tbody>${d.lines.map(l => `
       <tr><td>${esc(l.name)}<div class="alt ${l.goodId ? 'yes' : 'no'}">${l.goodId ? 'Altegio: ' + esc(l.goodTitle) : 'нет в Altegio'}</div>
         ${d.canEdit ? `<select data-line="${l.no - 1}" style="margin-top:4px;padding:6px;font-size:13px">${catOpts(l.category)}</select>` : `<div class="muted">${esc(l.category)}</div>`}</td>
-      <td class="n">${esc(l.qty)} ${esc(l.unit)}<div class="muted">× ${money(l.price)}</div></td>
+      <td class="n">${esc(l.qty)} ${esc(unitRu(l.unit))}<div class="muted">× ${money(l.price)}</div></td>
       <td class="n"><b>${money(l.sum)}</b></td></tr>`).join('') || '<tr><td class="muted">Строк нет</td></tr>'}</tbody></table></div>
     ${d.altegio ? `<div class="card"><b>Altegio:</b> ${esc(d.altegio)}</div>` : ''}
     <div class="btns">
       ${d.canEdit ? '<button class="btn sec" id="save">Сохранить изменения</button>' : ''}
       ${d.canApprove ? '<input id="reason" placeholder="Причина, если отклоняете"><div class="btns two" style="margin:0"><button class="btn ok" id="approve">Утвердить</button><button class="btn bad" id="reject">Отклонить</button></div>' : ''}
-      ${d.canEdit && d.status !== 'Утверждён' ? '<button class="btn sec" id="retry">Распознать заново</button>' : ''}
+      ${d.canEdit && d.status !== 'Утверждён' && d.kind !== 'Без документа' ? '<button class="btn sec" id="retry">Распознать заново</button>' : ''}
       ${ME.user.approver && d.status === 'Утверждён' && !d.altegioId ? '<button class="btn" id="toAltegio">Отправить в Altegio</button>' : ''}
     </div>`;
   const form = () => {
@@ -857,7 +911,7 @@ async function switchClient(code) {
 async function start() {
   if (tg) {
     tg.ready(); tg.expand();
-    tg.BackButton.onClick(() => go(TAB === 'upload' ? 'docs' : TAB));
+    tg.BackButton.onClick(() => go(TAB === 'upload' || TAB === 'manual' ? 'docs' : TAB));
     try { tg.setHeaderColor('#0f1216'); tg.setBackgroundColor('#0f1216'); } catch (e) {}
     try { if (tg.setBottomBarColor) tg.setBottomBarColor('#1a1e25'); } catch (e) {}
     // На телефоне: на весь экран, как в видео (Telegram 8.0 и новее). Свайп вниз не закрывает приложение.
