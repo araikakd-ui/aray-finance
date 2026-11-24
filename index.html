@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Финансы с Арайлым</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #ffffff);
+    --bg2: var(--tg-theme-secondary-bg-color, #f2f3f5);
+    --text: var(--tg-theme-text-color, #16181d);
+    --hint: var(--tg-theme-hint-color, #8a8f98);
+    --accent: #1aa898;
+    --accent-text: #ffffff;
+    --ok: #1f9d55;
+    --warn: #d98a00;
+    --bad: #d64545;
+    --line: color-mix(in srgb, var(--hint) 25%, transparent);
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg2); color: var(--text);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+  main { padding: 12px 12px 92px; max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 4px 4px 12px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--hint); margin: 18px 6px 8px; font-weight: 600; }
+  .card { background: var(--bg); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .muted { color: var(--hint); font-size: 13px; }
+  .big { font-size: 28px; font-weight: 700; letter-spacing: -.01em; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hero { background: var(--accent); color: var(--accent-text); }
+  .hero .muted { color: color-mix(in srgb, var(--accent-text) 80%, transparent); }
+  .bar { height: 6px; border-radius: 3px; background: var(--bg2); overflow: hidden; margin-top: 6px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .b-wait { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .b-ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .b-no, .b-err { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+  .check-ok { color: var(--ok); } .check-bad { color: var(--bad); }
+  .doc { cursor: pointer; }
+  .doc + .doc { margin-top: -2px; }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding: 0 2px 8px; }
+  .chip { border: 0; background: var(--bg); color: var(--text); padding: 7px 12px; border-radius: 99px; font: inherit; font-size: 14px; white-space: nowrap; }
+  .chip.on { background: var(--accent); color: var(--accent-text); }
+  button.btn { border: 0; width: 100%; padding: 13px; border-radius: 12px; font: inherit; font-weight: 600; background: var(--accent); color: var(--accent-text); }
+  button.btn.sec { background: var(--bg2); color: var(--text); }
+  button.btn.ok { background: var(--ok); } button.btn.bad { background: var(--bad); }
+  button.btn:disabled { opacity: .5; }
+  .btns { display: grid; gap: 8px; margin-top: 10px; }
+  .btns.two { grid-template-columns: 1fr 1fr; }
+  label.f { display: block; margin-bottom: 10px; }
+  label.f span { display: block; font-size: 12px; color: var(--hint); margin: 0 0 4px 2px; }
+  input, select, textarea { width: 100%; font: inherit; color: var(--text); background: var(--bg2); border: 1px solid transparent; border-radius: 10px; padding: 10px; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { min-height: 60px; resize: vertical; }
+  .thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  .thumbs img, .thumbs .pdf { width: 76px; height: 96px; object-fit: cover; border-radius: 10px; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--hint); }
+  main > .btns .btn.sec, main > .btns input { background: var(--bg); }
+  .row h1 { font-size: 18px; white-space: nowrap; }
+  .monthsw b { white-space: nowrap; font-size: 14px; }
+  .drop { display: block; cursor: pointer; border: 2px dashed var(--line); border-radius: var(--radius); padding: 22px; text-align: center; color: var(--hint); }
+  .drop b { color: var(--accent); display: block; font-size: 16px; margin-bottom: 4px; }
+  .photos { display: flex; gap: 8px; overflow-x: auto; }
+  .photos img { height: 220px; border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td { padding: 8px 4px; border-top: 1px solid var(--line); vertical-align: top; }
+  td.n { text-align: right; white-space: nowrap; }
+  .alt { font-size: 12px; } .alt.yes { color: var(--ok); } .alt.no { color: var(--hint); }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+  nav button { flex: 1; border: 0; background: none; color: var(--hint); padding: 9px 0 10px; font: inherit; font-size: 12px; }
+  nav button svg { display: block; margin: 0 auto 2px; width: 24px; height: 24px; }
+  nav button.on { color: var(--accent); }
+  .center { text-align: center; padding: 40px 10px; color: var(--hint); }
+  .spin { width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: s 0.8s linear infinite; margin: 0 auto 10px; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  .toast { position: fixed; left: 12px; right: 12px; bottom: 80px; background: #222; color: #fff; padding: 12px 14px; border-radius: 12px; font-size: 14px; z-index: 9; }
+  .lowitem { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .lowitem:first-child { border-top: 0; }
+  .monthsw { display: flex; align-items: center; gap: 6px; }
+  .monthsw button { border: 0; background: var(--bg); color: var(--text); width: 32px; height: 32px; border-radius: 50%; font-size: 16px; }
+  .notes { background: color-mix(in srgb, var(--warn) 12%, transparent); border-radius: 10px; padding: 10px; font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main id="app"><div class="center"><div class="spin"></div>Загрузка…</div></main>
+<nav id="nav" hidden>
+  <button data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM14 4v4h6V4zM4 20h6v-3H4z"/></svg>Сводка</button>
+  <button data-tab="upload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Загрузить</button>
+  <button data-tab="docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>Документы</button>
+</nav>
+<script>
+// ====== Вставьте сюда адрес веб-приложения Google Apps Script (заканчивается на /exec) ======
+const API_URL = 'https://script.google.com/macros/s/AKfycbw6juK8GHilzHdv2zN4VE6syBlK4Ad8gndfmeKLixjNZKyNXYgBErm-WC1HYq_ELZE4kQ/exec';
+// ==========================================================================================
+
+const tg = window.Telegram && window.Telegram.WebApp;
+const $app = document.getElementById('app');
+const $nav = document.getElementById('nav');
+let ME = null, TAB = 'home', DOCFILTER = 'На проверке', MONTH = monthNow(), PENDING_FILES = [], CUR = null;
+let CLIENT = new URLSearchParams(location.search).get('client') || localStorage.getItem('client') || '';
+
+const STATUS_CLASS = { 'На проверке': 'b-wait', 'Утверждён': 'b-ok', 'Отклонён': 'b-no', 'Ошибка распознавания': 'b-err' };
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+function monthNow() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function money(n) { const v = Math.round((Number(n) || 0) * 100) / 100; const [i, f] = Math.abs(v).toFixed(2).split('.'); return (v < 0 ? '-' : '') + i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (f === '00' ? '' : ',' + f) + ' ₸'; }
+function badge(s) { return `<span class="badge ${STATUS_CLASS[s] || 'b-wait'}">${esc(s)}</span>`; }
+function checkClass(c) { return /^Сумма сходится/.test(c || '') && !/не найдены/.test(c || '') ? 'check-ok' : 'check-bad'; }
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 3500); }
+function haptic(type) { try { tg.HapticFeedback.notificationOccurred(type); } catch (e) {} }
+function loading(text) { $app.innerHTML = `<div class="center"><div class="spin"></div>${esc(text || 'Загрузка…')}</div>`; }
+
+async function api(action, data) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(Object.assign({ action, initData: tg ? tg.initData : '', client: CLIENT }, data || {})),
+  });
+  const j = await res.json();
+  if (j.error === 'no_access') { showNoAccess(j); throw new Error('no_access'); }
+  if (j.error) throw new Error(j.error);
+  return j;
+}
+
+function showNoAccess(j) {
+  $nav.hidden = true;
+  $app.innerHTML = `<div class="card center"><h1>Нет доступа</h1><p>Передайте этот номер бухгалтеру, вас добавят в список сотрудников.</p><p class="big">${esc(j.telegramId)}</p></div>`;
+}
+
+// ====== Навигация ======
+$nav.addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.tab); });
+function go(tab) {
+  TAB = tab; CUR = null;
+  [...$nav.children].forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  if (tg) tg.BackButton.hide();
+  if (tab === 'home') renderHome();
+  if (tab === 'upload') renderUpload();
+  if (tab === 'docs') renderDocs();
+  window.scrollTo(0, 0);
+}
+
+// ====== Сводка ======
+async function renderHome() {
+  loading();
+  try {
+    const s = await api('summary', { month: MONTH });
+    if (TAB !== 'home') return;
+    const [y, m] = MONTH.split('-');
+    const max = Math.max(1, ...s.byCat.map(x => x.sum));
+    const waitCount = s.counts['На проверке'] || 0;
+    $app.innerHTML = `
+      ${ME.clients.length > 1 ? `<select id="client" style="margin-bottom:10px;font-weight:600">${ME.clients.map(c => `<option value="${esc(c.code)}" ${c.code === ME.client.code ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>` : ''}
+      <div class="row"><h1>${esc(ME.client.name)}</h1>
+        <div class="monthsw"><button data-m="-1">‹</button><b>${MONTHS[Number(m) - 1]} ${y}</b><button data-m="1">›</button></div></div>
+      <div class="card hero doc" data-go="wait">
+        <div class="muted">Ждут проверки</div>
+        <div class="row"><div class="big">${waitCount} ${plural(waitCount, 'документ', 'документа', 'документов')}</div><div>›</div></div>
+        <div class="muted">на ${money(s.pending)} за месяц</div>
+      </div>
+      <div class="grid2">
+        <div class="card"><div class="muted">Утверждено за месяц</div><div class="big" style="font-size:22px">${money(s.approved)}</div></div>
+        <div class="card"><div class="muted">Ошибки распознавания</div><div class="big" style="font-size:22px">${s.counts['Ошибка распознавания'] || 0}</div></div>
+      </div>
+      <h2>Расходы по статьям</h2>
+      <div class="card">${s.byCat.length ? s.byCat.map(x => `
+        <div style="margin-bottom:10px"><div class="row"><span>${esc(x.cat)}</span><b>${money(x.sum)}</b></div>
+        <div class="bar"><i style="width:${Math.round(x.sum / max * 100)}%"></i></div></div>`).join('') : '<div class="muted">За этот месяц утверждённых документов нет</div>'}
+      </div>
+      ${ME.user.approver ? `
+      <h2>Altegio: заканчиваются</h2>
+      <div class="card">${s.low.length ? s.low.map(g => `<div class="lowitem"><span>${esc(g.title)}</span><span class="check-bad">${esc(g.stock)} ${esc(g.unit)} (мин. ${esc(g.min)})</span></div>`).join('') : '<div class="muted">Нет позиций ниже минимального остатка</div>'}
+        <div class="muted" style="margin-top:8px">Обновлено: ${esc(s.goodsSynced || 'ещё не загружали')}</div>
+        <div class="btns"><button class="btn sec" id="sync">Обновить из Altegio</button></div>
+        ${ME.sheetUrl ? `<div class="btns"><button class="btn sec" id="sheet">Открыть таблицу</button></div>` : ''}
+      </div>` : ''}
+      <h2>Последние</h2>
+      ${s.recent.map(docCard).join('') || '<div class="card muted">Документов пока нет</div>'}`;
+    const sel = document.getElementById('client');
+    if (sel) sel.onchange = () => switchClient(sel.value);
+    $app.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { MONTH = shiftMonth(MONTH, Number(b.dataset.m)); renderHome(); });
+    $app.querySelector('[data-go="wait"]').onclick = () => { DOCFILTER = 'На проверке'; go('docs'); };
+    bindDocCards();
+    const sync = document.getElementById('sync');
+    if (sync) sync.onclick = async () => {
+      sync.disabled = true; sync.textContent = 'Загружаю товары и справочники…';
+      try { const r = await api('syncAltegio'); toast(`Загружено товаров: ${r.goods}`); renderHome(); }
+      catch (e) { toast(e.message); sync.disabled = false; sync.textContent = 'Обновить из Altegio'; }
+    };
+    const sheet = document.getElementById('sheet');
+    if (sheet) sheet.onclick = () => tg ? tg.openLink(ME.sheetUrl) : window.open(ME.sheetUrl);
+  } catch (e) { if (e.message !== 'no_access') $app.innerHTML = `<div class="card">${esc(e.message)}</div>`; }
+}
+function plural(n, a, b, c) { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? b : c; }
+function shiftMonth(m, d) { let [y, mm] = m.split('-').map(Number); mm += d; if (mm < 1) { mm = 12; y--; } if (mm > 12) { mm = 1; y++; } return y + '-' + String(mm).padStart(2, '0'); }
+
+function docCard(d) {
+  return `<div class="card doc" data-id="${esc(d.id)}">
+    <div class="row"><b>${esc(d.counterparty || 'Контрагент не распознан')}</b><b>${money(d.total)}</b></div>
+    <div class="row muted"><span>${esc(d.id)} · ${esc(d.kind || 'документ')}${d.number ? ' № ' + esc(d.number) : ''}${d.date ? ' от ' + esc(d.date) : ''}</span></div>
+    <div class="row" style="margin-top:6px"><span class="muted">${esc(d.category || '')}</span>${badge(d.status)}</div>
+  </div>`;
+}
+function bindDocCards() { $app.querySelectorAll('.doc[data-id]').forEach(c => c.onclick = () => openDoc(c.dataset.id)); }
+
+// ====== Загрузка ======
+function renderUpload() {
+  $app.innerHTML = `
+    <h1>Новый документ</h1>
+    <div class="card">
+      <label class="drop" for="file"><b>Сфотографировать или выбрать</b>накладная, чек, счёт-фактура, акт. Можно несколько страниц одного документа</label>
+      <input type="file" id="file" accept="image/*,application/pdf" multiple hidden>
+      <div class="thumbs" id="thumbs"></div>
+      <label class="f"><span>Оплата</span><select id="pay">${ME.payments.map(p => `<option>${esc(p)}</option>`).join('')}</select></label>
+      <label class="f"><span>Комментарий (необязательно)</span><textarea id="comment" placeholder="например: оплатила наличными из кассы"></textarea></label>
+      <div class="btns"><button class="btn" id="send" disabled>Отправить на распознавание</button></div>
+    </div>
+    <div class="muted" style="padding:0 6px">Фото должно быть ровным и чётким, документ целиком в кадре. Распознавание занимает до минуты.</div>`;
+  PENDING_FILES = [];
+  document.getElementById('file').onchange = async e => {
+    for (const f of e.target.files) {
+      if (PENDING_FILES.length >= 6) { toast('Не больше 6 страниц'); break; }
+      try { PENDING_FILES.push(await prepareFile(f)); } catch (err) { toast(err.message); }
+    }
+    e.target.value = '';
+    drawThumbs();
+  };
+  document.getElementById('send').onclick = sendUpload;
+}
+function drawThumbs() {
+  const t = document.getElementById('thumbs');
+  t.innerHTML = PENDING_FILES.map((f, i) => f.mime === 'application/pdf'
+    ? `<div class="pdf" data-i="${i}">PDF ✕</div>`
+    : `<img src="data:${f.mime};base64,${f.data}" data-i="${i}" alt="">`).join('');
+  t.querySelectorAll('[data-i]').forEach(el => el.onclick = () => { PENDING_FILES.splice(Number(el.dataset.i), 1); drawThumbs(); });
+  document.getElementById('send').disabled = PENDING_FILES.length === 0;
+}
+function prepareFile(file) {
+  return new Promise((resolve, reject) => {
+    if (file.type === 'application/pdf') {
+      if (file.size > 8 * 1024 * 1024) return reject(new Error('PDF больше 8 МБ'));
+      const r = new FileReader();
+      r.onload = () => resolve({ mime: 'application/pdf', data: String(r.result).split(',')[1] });
+      r.onerror = () => reject(new Error('Не удалось прочитать файл'));
+      return r.readAsDataURL(file);
+    }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 2000, k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve({ mime: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.85).split(',')[1] });
+    };
+    img.onerror = () => reject(new Error('Это не фото'));
+    img.src = url;
+  });
+}
+async function sendUpload() {
+  const pay = document.getElementById('pay').value, comment = document.getElementById('comment').value;
+  const files = PENDING_FILES.slice();
+  loading('Распознаю документ… обычно 20-60 секунд');
+  try {
+    const doc = await api('upload', { files, payment: pay, comment });
+    haptic(doc.status === 'Ошибка распознавания' ? 'error' : 'success');
+    PENDING_FILES = [];
+    openDoc(doc.id);
+  } catch (e) {
+    if (e.message === 'no_access') return;
+    haptic('error'); toast(e.message); renderUpload(); PENDING_FILES = files; drawThumbs();
+  }
+}
+
+// ====== Список ======
+async function renderDocs() {
+  const filters = ['На проверке', 'Утверждён', 'Отклонён', 'Ошибка распознавания', 'Все'];
+  $app.innerHTML = `<h1>Документы</h1><div class="chips">${filters.map(f => `<button class="chip ${f === DOCFILTER ? 'on' : ''}" data-f="${f}">${f}</button>`).join('')}</div><div id="list"><div class="center"><div class="spin"></div></div></div>`;
+  $app.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { DOCFILTER = b.dataset.f; renderDocs(); });
+  try {
+    const r = await api('list', { status: DOCFILTER });
+    if (TAB !== 'docs') return;
+    document.getElementById('list').innerHTML = r.docs.map(docCard).join('') || '<div class="card muted">Пусто</div>';
+    bindDocCards();
+  } catch (e) { if (e.message !== 'no_access') document.getElementById('list').innerHTML = `<div class="card">${esc(e.message)}</div>`; }
+}
+
+// ====== Карточка документа ======
+async function openDoc(id) {
+  CUR = id;
+  if (tg) { tg.BackButton.show(); }
+  loading();
+  try {
+    const d = await api('get', { id });
+    if (CUR !== id) return;
+    renderDoc(d);
+  } catch (e) { if (e.message !== 'no_access') $app.innerHTML = `<div class="card">${esc(e.message)}</div>`; }
+}
+function renderDoc(d) {
+  const ro = d.canEdit ? '' : 'disabled';
+  const opt = (arr, v) => arr.map(x => `<option ${x === v ? 'selected' : ''}>${esc(x)}</option>`).join('');
+  const catOpts = v => `<option value=""></option>` + opt(ME.cats, v);
+  $app.innerHTML = `
+    <div class="row"><h1>${esc(d.id)}</h1>${badge(d.status)}</div>
+    <div class="card">
+      <div class="photos">${(d.photos || []).map(p => p.mime === 'application/pdf' ? '<div class="muted">PDF файл</div>' : `<img src="data:${p.mime};base64,${p.data}" alt="">`).join('')}</div>
+      <div class="muted" style="margin-top:6px">Загрузил(а) ${esc(d.uploader)}, ${esc(d.uploaded)}${d.reviewer ? ' · проверил(а) ' + esc(d.reviewer) : ''}</div>
+    </div>
+    <div class="card">
+      <div class="${checkClass(d.check)}" style="font-weight:600">${esc(d.check || '')}</div>
+      ${d.notes ? `<div class="notes">${esc(d.notes)}</div>` : ''}
+    </div>
+    <div class="card" id="form">
+      <div class="grid2">
+        <label class="f"><span>Вид</span><select name="kind" ${ro}>${opt(ME.kinds, d.kind)}</select></label>
+        <label class="f"><span>Номер</span><input name="number" value="${esc(d.number)}" ${ro}></label>
+        <label class="f"><span>Дата (ДД.ММ.ГГГГ)</span><input name="date" value="${esc(d.date)}" inputmode="numeric" ${ro}></label>
+        <label class="f"><span>Сумма, ₸</span><input name="total" value="${esc(d.total)}" inputmode="decimal" ${ro}></label>
+      </div>
+      <label class="f"><span>Контрагент</span><input name="counterparty" value="${esc(d.counterparty)}" ${ro}></label>
+      <div class="grid2">
+        <label class="f"><span>БИН/ИИН</span><input name="bin" value="${esc(d.bin)}" inputmode="numeric" ${ro}></label>
+        <label class="f"><span>Оплата</span><select name="payment" ${ro}>${opt(ME.payments, d.payment)}</select></label>
+      </div>
+      <label class="f"><span>Статья</span><select name="category" ${ro}>${catOpts(d.category)}</select></label>
+      <label class="f"><span>Комментарий</span><textarea name="comment" ${ro}>${esc(d.comment)}</textarea></label>
+    </div>
+    <h2>Строки документа · ${money(d.linesSum)}</h2>
+    <div class="card"><table><tbody>${d.lines.map(l => `
+      <tr><td>${esc(l.name)}<div class="alt ${l.goodId ? 'yes' : 'no'}">${l.goodId ? 'Altegio: ' + esc(l.goodTitle) : 'нет в Altegio'}</div>
+        ${d.canEdit ? `<select data-line="${l.no - 1}" style="margin-top:4px;padding:6px;font-size:13px">${catOpts(l.category)}</select>` : `<div class="muted">${esc(l.category)}</div>`}</td>
+      <td class="n">${esc(l.qty)} ${esc(l.unit)}<div class="muted">× ${money(l.price)}</div></td>
+      <td class="n"><b>${money(l.sum)}</b></td></tr>`).join('') || '<tr><td class="muted">Строк нет</td></tr>'}</tbody></table></div>
+    ${d.altegio ? `<div class="card"><b>Altegio:</b> ${esc(d.altegio)}</div>` : ''}
+    <div class="btns">
+      ${d.canEdit ? '<button class="btn sec" id="save">Сохранить изменения</button>' : ''}
+      ${d.canApprove ? '<input id="reason" placeholder="Причина, если отклоняете"><div class="btns two" style="margin:0"><button class="btn ok" id="approve">Утвердить</button><button class="btn bad" id="reject">Отклонить</button></div>' : ''}
+      ${d.canEdit && d.status !== 'Утверждён' ? '<button class="btn sec" id="retry">Распознать заново</button>' : ''}
+      ${ME.user.approver && d.status === 'Утверждён' && !d.altegioId ? '<button class="btn" id="toAltegio">Отправить в Altegio</button>' : ''}
+    </div>`;
+  const form = () => {
+    const f = {};
+    document.querySelectorAll('#form [name]').forEach(el => f[el.name] = el.value.trim());
+    return f;
+  };
+  const lines = () => d.lines.map((l, i) => {
+    const sel = document.querySelector(`[data-line="${i}"]`);
+    return { name: l.name, qty: l.qty, unit: l.unit, price: l.price, sum: l.sum, category: sel ? sel.value : l.category, goodId: l.goodId };
+  });
+  const act = async (btn, fn, okText) => {
+    const b = document.getElementById(btn); if (!b) return;
+    b.onclick = async () => {
+      b.disabled = true;
+      try { const r = await fn(); haptic('success'); toast(okText + (r && r.altegioResult ? ' · Altegio: ' + r.altegioResult : '')); openDoc(d.id); }
+      catch (e) { haptic('error'); toast(e.message); b.disabled = false; if (!document.body.contains(b)) openDoc(d.id); }
+    };
+  };
+  act('save', () => api('update', { id: d.id, fields: form(), lines: d.canEdit ? lines() : undefined }), 'Сохранено');
+  act('approve', async () => { if (d.canEdit) await api('update', { id: d.id, fields: form(), lines: lines() }); return api('approve', { id: d.id }); }, 'Утверждено');
+  act('reject', () => {
+    const reason = document.getElementById('reason').value.trim();
+    if (!reason) throw new Error('Напишите причину отклонения');
+    return api('reject', { id: d.id, reason });
+  }, 'Отклонено');
+  act('retry', () => { loading('Распознаю заново…'); return api('retry', { id: d.id }); }, 'Распознано заново');
+  act('toAltegio', async () => { const r = await api('sendAltegio', { id: d.id }); return { altegioResult: r.result }; }, 'Отправлено');
+}
+
+// ====== Клиент ======
+async function loadMe() {
+  ME = await api('me');
+  CLIENT = ME.client.code;
+  localStorage.setItem('client', CLIENT);
+  document.title = ME.client.name;
+}
+async function switchClient(code) {
+  CLIENT = code;
+  loading();
+  try { await loadMe(); go('home'); } catch (e) { if (e.message !== 'no_access') toast(e.message); }
+}
+
+// ====== Запуск ======
+async function start() {
+  if (tg) {
+    tg.ready(); tg.expand();
+    tg.BackButton.onClick(() => go(TAB));
+    try { tg.setHeaderColor('secondary_bg_color'); } catch (e) {}
+  }
+  if (!tg || !tg.initData) {
+    $app.innerHTML = '<div class="card center"><h1>Финансы с Арайлым</h1><p>Откройте приложение через бота в Telegram.</p></div>';
+    return;
+  }
+  try {
+    await loadMe();
+    $nav.hidden = false;
+    const docParam = new URLSearchParams(location.search).get('doc');
+    go('home');
+    if (docParam) openDoc(docParam);
+  } catch (e) {
+    if (e.message !== 'no_access') $app.innerHTML = `<div class="card">Не удалось подключиться: ${esc(e.message)}</div>`;
+  }
+}
+start();
+</script>
+</body>
+</html>
