@@ -6,23 +6,37 @@
 <title>Финансы с Арайлым</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
+  /* Свой вид «Финансы с Арайлым»: один и тот же в светлой и тёмной теме Telegram */
   :root {
-    --bg: var(--tg-theme-bg-color, #ffffff);
-    --bg2: var(--tg-theme-secondary-bg-color, #f2f3f5);
-    --text: var(--tg-theme-text-color, #16181d);
-    --hint: var(--tg-theme-hint-color, #8a8f98);
-    --accent: #1aa898;
-    --accent-text: #ffffff;
-    --ok: #1f9d55;
-    --warn: #d98a00;
-    --bad: #d64545;
-    --line: color-mix(in srgb, var(--hint) 25%, transparent);
-    --radius: 14px;
+    --bg: #1a1e25;          /* карточки */
+    --bg2: #0f1216;         /* фон страницы */
+    --field: #242a33;       /* поля ввода */
+    --text: #f2f4f6;
+    --hint: #8f97a3;
+    --accent: #2fd1b2;      /* бирюзовый */
+    --accent-text: #08201b;
+    --gold: #f4c542;        /* акцент для главных цифр */
+    --ok: #3ccf7f;
+    --warn: #f0a92e;
+    --bad: #ff6b6b;
+    --line: rgba(143, 151, 163, .18);
+    --radius: 18px;
+    --top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg2); color: var(--text);
     font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
-  main { padding: 12px 12px 92px; max-width: 640px; margin: 0 auto; }
+  main { padding: calc(var(--top) + 12px) 12px 96px; max-width: 640px; margin: 0 auto; }
+  .hero .big { color: #062019; }
+  .gold { color: var(--gold); }
+  .stock .big { color: var(--gold); }
+  .qa { border: 0; width: 40px; height: 40px; border-radius: 12px; background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); font-size: 20px; font-weight: 700; flex: 0 0 auto; }
+  .qa:disabled { opacity: .4; }
+  .docrow { display: flex; gap: 10px; align-items: center; }
+  .docrow .card { flex: 1; margin-bottom: 0; min-width: 0; }
+  .doc .row > * { min-width: 0; overflow-wrap: anywhere; }
+  html, body { overflow-x: hidden; }
+  .dlist > * + * { margin-top: 8px; }
   h1 { font-size: 20px; margin: 4px 4px 12px; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--hint); margin: 18px 6px 8px; font-weight: 600; }
   .card { background: var(--bg); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
@@ -30,7 +44,7 @@
   .muted { color: var(--hint); font-size: 13px; }
   .big { font-size: 28px; font-weight: 700; letter-spacing: -.01em; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .hero { background: var(--accent); color: var(--accent-text); }
+  .hero { background: linear-gradient(135deg, #2fd1b2 0%, #17a58b 100%); color: var(--accent-text); }
   .hero .muted { color: color-mix(in srgb, var(--accent-text) 80%, transparent); }
   .bar { height: 6px; border-radius: 3px; background: var(--bg2); overflow: hidden; margin-top: 6px; }
   .bar > i { display: block; height: 100%; background: var(--accent); }
@@ -45,14 +59,14 @@
   .chip { border: 0; background: var(--bg); color: var(--text); padding: 7px 12px; border-radius: 99px; font: inherit; font-size: 14px; white-space: nowrap; }
   .chip.on { background: var(--accent); color: var(--accent-text); }
   button.btn { border: 0; width: 100%; padding: 13px; border-radius: 12px; font: inherit; font-weight: 600; background: var(--accent); color: var(--accent-text); }
-  button.btn.sec { background: var(--bg2); color: var(--text); }
+  button.btn.sec { background: var(--field); color: var(--text); }
   button.btn.ok { background: var(--ok); } button.btn.bad { background: var(--bad); }
   button.btn:disabled { opacity: .5; }
   .btns { display: grid; gap: 8px; margin-top: 10px; }
   .btns.two { grid-template-columns: 1fr 1fr; }
   label.f { display: block; margin-bottom: 10px; }
   label.f span { display: block; font-size: 12px; color: var(--hint); margin: 0 0 4px 2px; }
-  input, select, textarea { width: 100%; font: inherit; color: var(--text); background: var(--bg2); border: 1px solid transparent; border-radius: 10px; padding: 10px; }
+  input, select, textarea { width: 100%; font: inherit; color: var(--text); background: var(--field); border: 1px solid transparent; border-radius: 10px; padding: 10px; color-scheme: dark; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
   textarea { min-height: 60px; resize: vertical; }
   .thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
@@ -81,14 +95,30 @@
   .monthsw { display: flex; align-items: center; gap: 6px; }
   .monthsw button { border: 0; background: var(--bg); color: var(--text); width: 32px; height: 32px; border-radius: 50%; font-size: 16px; }
   .notes { background: color-mix(in srgb, var(--warn) 12%, transparent); border-radius: 10px; padding: 10px; font-size: 13px; margin-top: 8px; }
+  .period { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .period select { background: var(--bg); font-size: 14px; padding: 8px; }
+  .toast { background: #2b323d; }
+  .rep td { padding: 6px 3px; }
+  .rep td:first-child { width: 46%; }
+  .rep tr.g td { font-weight: 700; border-top: 2px solid var(--line); }
+  .rep tr.h td { font-size: 12px; color: var(--hint); text-transform: uppercase; letter-spacing: .03em; border-top: 0; padding-top: 14px; }
+  .rep tr.sub td:first-child { padding-left: 12px; }
+  .over { color: var(--bad); } .under { color: var(--ok); }
+  .kv { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .kv:first-child { border-top: 0; }
+  .alert { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .alert:first-child { border-top: 0; }
+  .kv b, .alert b { white-space: nowrap; }
+  .hero .kv { border-color: color-mix(in srgb, var(--accent-text) 25%, transparent); }
 </style>
 </head>
 <body>
 <main id="app"><div class="center"><div class="spin"></div>Загрузка…</div></main>
 <nav id="nav" hidden>
   <button data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM14 4v4h6V4zM4 20h6v-3H4z"/></svg>Сводка</button>
-  <button data-tab="upload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Загрузить</button>
   <button data-tab="docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>Документы</button>
+  <button data-tab="buy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2.4 11h11.2L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="18" cy="19.5" r="1.5"/></svg>Закупка</button>
+  <button data-tab="reports" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Отчёты</button>
 </nav>
 <script>
 // ====== Вставьте сюда адрес веб-приложения Google Apps Script (заканчивается на /exec) ======
@@ -133,12 +163,401 @@ function showNoAccess(j) {
 $nav.addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.tab); });
 function go(tab) {
   TAB = tab; CUR = null;
-  [...$nav.children].forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  [...$nav.children].forEach(b => b.classList.toggle('on', b.dataset.tab === (tab === 'upload' ? 'docs' : tab)));
   if (tg) tg.BackButton.hide();
   if (tab === 'home') renderHome();
-  if (tab === 'upload') renderUpload();
+  if (tab === 'upload') { renderUpload(); if (tg) tg.BackButton.show(); }
   if (tab === 'docs') renderDocs();
+  if (tab === 'reports') renderReports();
+  if (tab === 'buy') renderBuy();
   window.scrollTo(0, 0);
+}
+
+// ====== Отчёты: ОПиУ, план-факт, ЗП собственницы, ДДС, рассрочки ======
+let REP = null, PFROM = '', PTO = '';
+const MSHORT = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+function mLabel(k) { const [y, m] = k.split('-'); return MSHORT[Number(m) - 1] + ' ' + y; }
+function mDiff(a, b) { const [ay, am] = a.split('-').map(Number), [by, bm] = b.split('-').map(Number); return (by - ay) * 12 + (bm - am); }
+function tg0(n) { return money(Math.round(n || 0)); }
+function pct(a, b) { return b ? Math.round((a - b) / Math.abs(b) * 100) : null; }
+
+async function renderReports() {
+  if (!REP) {
+    loading('Загружаю отчёты…');
+    try { REP = await api('reports'); } catch (e) { if (e.message !== 'no_access') $app.innerHTML = `<div class="card">${esc(e.message)}</div>`; return; }
+    if (TAB !== 'reports') return;
+    if (!REP.months.length) { $app.innerHTML = '<div class="card muted">Отчётов пока нет. Их добавляет бухгалтер после обновления модели.</div>'; return; }
+    PFROM = PTO = REP.factTo || REP.months[REP.months.length - 1];
+  }
+  if (REPVIEW === 'staff') drawStaff();
+  else if (REPVIEW === 'days') renderDays();
+  else if (REPVIEW === 'years') drawYears();
+  else drawReports();
+}
+
+function sumRange(arr, idx) { let s = 0, any = false; idx.forEach(i => { if (arr[i] !== null && arr[i] !== undefined) { s += arr[i]; any = true; } }); return any ? s : null; }
+
+function drawReports() {
+  const R = REP, ms = R.months;
+  const idx = ms.map((m, i) => i).filter(i => ms[i] >= PFROM && ms[i] <= PTO);
+  const pl = R.lines.filter(l => l.sec === 'ОПиУ');
+  const factIdx = idx.filter(i => pl.some(l => l.fact[i] !== null));
+  const hasFact = factIdx.length > 0;
+  const cmpIdx = hasFact ? factIdx : idx;
+  const val = (l, kind) => sumRange(kind === 'f' ? l.fact : l.plan, kind === 'f' ? factIdx : cmpIdx) || 0;
+  const tot = (kind, grp) => pl.filter(l => l.grp === grp).reduce((s, l) => s + val(l, kind), 0);
+  const calc = kind => {
+    const rev = tot(kind, 'Выручка'), vr = tot(kind, 'Переменные'), fx = tot(kind, 'Постоянные'), bt = tot(kind, 'Амортизация и налог');
+    const own = R.lines.filter(l => l.sec === 'Собственница');
+    const get = g => own.filter(l => l.grp === g).reduce((s, l) => s + val(l, kind), 0);
+    const net = rev - vr - fx - bt, zp = get('ЗП'), adj = get('Поправки');
+    return { rev, vr, fx, bt, ebitda: rev - vr - fx, net, zp, adj, norm: net - zp - adj, ownServ: get('Услуги') };
+  };
+  const F = calc('f'), P = calc('p');
+  const opts = ms.map(m => `<option value="${m}">${mLabel(m)}${m > (R.factTo || '') ? ' (план)' : ''}</option>`).join('');
+  const lastQ = ms.filter(m => m <= R.factTo).slice(-3);
+  const yearOf = m => m.slice(0, 4);
+  const dev = (f, p, isRev) => {
+    if (!hasFact || !p) return '';
+    const d = f - p, k = pct(f, p);
+    const bad = isRev ? d < 0 : d > 0;
+    if (Math.abs(d) < 1) return '<span class="muted">0</span>';
+    return `<span class="${bad ? 'over' : 'under'}">${d > 0 ? '+' : ''}${tg0(d)}${k !== null ? ' (' + (k > 0 ? '+' : '') + k + '%)' : ''}</span>`;
+  };
+  // перерасходы
+  const alerts = [];
+  if (hasFact) pl.forEach(l => {
+    const f = val(l, 'f'), p = val(l, 'p'), d = f - p;
+    if (l.grp === 'Выручка') { if (p > 0 && d < -Math.max(20000, p * 0.05)) alerts.push({ t: l.name + ': ниже плана', d }); }
+    else if (l.grp !== 'Амортизация и налог' && d > Math.max(10000, p * 0.1)) alerts.push({ t: l.name, d });
+  });
+  alerts.sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+  const row = (name, f, p, cls, isRev) => `<tr class="${cls || ''}"><td>${esc(name)}</td><td class="n">${hasFact ? tg0(f) : 'нет факта'}</td><td class="n muted">${tg0(p)}</td><td class="n">${dev(f, p, isRev)}</td></tr>`;
+  const grpRows = (grp, isRev) => pl.filter(l => l.grp === grp).sort((a, b) => a.order - b.order)
+    .filter(l => Math.abs(val(l, 'f')) + Math.abs(val(l, 'p')) > 0)
+    .map(l => row(l.name, val(l, 'f'), val(l, 'p'), 'sub', isRev)).join('');
+  // ДДС
+  const dl = R.lines.filter(l => l.sec === 'ДДС');
+  const dIdx = idx.filter(i => dl.some(l => l.fact[i] !== null && l.grp !== 'Остаток на начало' && l.grp !== 'Остаток на конец'));
+  const dv = l => sumRange(l.fact, dIdx) || 0;
+  const dGrp = g => dl.filter(l => l.grp === g && Math.abs(dv(l)) > 0).sort((a, b) => a.order - b.order);
+  const dSum = g => dGrp(g).reduce((s, l) => s + dv(l), 0);
+  const startL = dl.find(l => l.grp === 'Остаток на начало'), endL = dl.find(l => l.grp === 'Остаток на конец');
+  const ddsHtml = dIdx.length ? `
+    <table class="rep"><tbody>
+      <tr class="g"><td>Остаток на начало</td><td class="n">${tg0(startL ? startL.fact[dIdx[0]] : 0)}</td></tr>
+      <tr class="h"><td colspan="2">Поступления</td></tr>
+      ${dGrp('Поступления').map(l => `<tr class="sub"><td>${esc(l.name)}</td><td class="n">${tg0(dv(l))}</td></tr>`).join('')}
+      <tr class="g"><td>Поступления итого</td><td class="n">${tg0(dSum('Поступления'))}</td></tr>
+      <tr class="h"><td colspan="2">Выплаты</td></tr>
+      ${dGrp('Выплаты').map(l => `<tr class="sub"><td>${esc(l.name)}</td><td class="n">${tg0(dv(l))}</td></tr>`).join('')}
+      <tr class="g"><td>Выплаты итого</td><td class="n">${tg0(dSum('Выплаты'))}</td></tr>
+      ${dGrp('Инвестиции').length ? `<tr class="h"><td colspan="2">Оборудование</td></tr>${dGrp('Инвестиции').map(l => `<tr class="sub"><td>${esc(l.name)}</td><td class="n">${tg0(dv(l))}</td></tr>`).join('')}` : ''}
+      <tr class="h"><td colspan="2">Кредиты и собственница</td></tr>
+      ${dGrp('Финансы').map(l => `<tr class="sub"><td>${esc(l.name)}</td><td class="n">${tg0(dv(l))}</td></tr>`).join('')}
+      <tr class="g"><td>Остаток на конец</td><td class="n">${tg0(endL ? endL.fact[dIdx[dIdx.length - 1]] : 0)}</td></tr>
+    </tbody></table>
+    <div class="muted" style="margin-top:6px">Остаток это счёт Kaspi Pay: выручка с него каждый день уходит на карту Меруерт.</div>` : '<div class="muted">За этот период движения денег нет (будет после внесения журнала).</div>';
+  // рассрочки
+  const now = R.today || monthNow();
+  const loans = R.loans.map(x => {
+    const paid = Math.max(0, Math.min(x.count, x.first ? mDiff(x.first, now) + 1 : 0));
+    const left = Math.max(0, x.sum - paid * x.pay);
+    const lastM = x.first ? (() => { let k = x.first; for (let i = 1; i < x.count; i++) k = shiftMonth(k, 1); return k; })() : '';
+    return Object.assign({ paid, left, lastM }, x);
+  });
+  const loansLeft = loans.reduce((s, x) => s + x.left, 0), loansPay = loans.filter(x => x.left > 0).reduce((s, x) => s + x.pay, 0);
+  const period = PFROM === PTO ? mLabel(PFROM) : mLabel(PFROM) + ' - ' + mLabel(PTO);
+
+  $app.innerHTML = `
+    <h1>Отчёты · ${esc(ME.client.name)}</h1>
+    ${viewChips()}
+    <div class="chips">
+      <button class="chip" data-q="last">Последний месяц</button>
+      <button class="chip" data-q="q">3 месяца</button>
+      ${[...new Set(ms.map(yearOf))].map(y => `<button class="chip" data-q="y${y}">${y} год</button>`).join('')}
+    </div>
+    <div class="period">
+      <label class="f" style="margin:0"><span>С месяца</span><select id="pf">${opts}</select></label>
+      <label class="f" style="margin:0"><span>По месяц</span><select id="pt">${opts}</select></label>
+    </div>
+    ${!hasFact ? `<div class="notes">За ${esc(period)} факта ещё нет, показан только план. Факт есть по ${esc(mLabel(R.factTo))}.</div>` : (idx.length > factIdx.length ? `<div class="notes">Факт есть по ${esc(mLabel(R.factTo))}. План сравнивается только за месяцы с фактом.</div>` : '')}
+
+    <div class="grid2">
+      <div class="card"><div class="muted">Выручка</div><div class="big" style="font-size:20px">${hasFact ? tg0(F.rev) : 'нет факта'}</div><div class="muted">план ${tg0(P.rev)} ${dev(F.rev, P.rev, true)}</div></div>
+      <div class="card"><div class="muted">Чистая прибыль</div><div class="big" style="font-size:20px">${hasFact ? tg0(F.net) : 'нет факта'}</div><div class="muted">план ${tg0(P.net)} ${dev(F.net, P.net, true)}</div></div>
+    </div>
+    <div class="card">
+      <div class="kv"><span>ЗП Меруерт (35% её услуг)</span><b>${tg0(hasFact ? F.zp : P.zp)}</b></div>
+      <div class="kv"><span>Прибыль центра после её ЗП</span><b class="${(hasFact ? F.norm : P.norm) < 0 ? 'over' : ''}">${tg0(hasFact ? F.norm : P.norm)}</b></div>
+    </div>
+
+    ${hasFact ? `<h2>Что вышло за план</h2><div class="card">${alerts.length ? alerts.slice(0, 8).map(a => `<div class="alert"><span>${esc(a.t)}</span><b class="over">${a.d > 0 ? '+' : ''}${tg0(a.d)}</b></div>`).join('') : '<div class="muted">Всё в пределах плана</div>'}</div>` : ''}
+
+    <h2>Прибыли и убытки (ОПиУ) · ${esc(period)}</h2>
+    <div class="card" style="padding:10px"><table class="rep"><tbody>
+      <tr class="h"><td></td><td class="n">Факт</td><td class="n">План</td><td class="n">Откл.</td></tr>
+      ${grpRows('Выручка', true)}
+      ${row('Выручка', F.rev, P.rev, 'g', true)}
+      ${grpRows('Переменные')}
+      ${row('Переменные расходы', F.vr, P.vr, 'g')}
+      ${grpRows('Постоянные')}
+      ${row('Постоянные расходы', F.fx, P.fx, 'g')}
+      ${row('EBITDA', F.ebitda, P.ebitda, 'g', true)}
+      ${grpRows('Амортизация и налог')}
+      ${row('Чистая прибыль', F.net, P.net, 'g', true)}
+      ${row('ЗП Меруерт (35%)', F.zp, P.zp, 'sub')}
+      ${F.adj || P.adj ? row('ЗП Дины и Шынар вне журнала', F.adj, P.adj, 'sub') : ''}
+      ${row('Прибыль после ЗП Меруерт', F.norm, P.norm, 'g', true)}
+    </tbody></table></div>
+
+    <h2>Движение денег (ДДС) · ${esc(period)}</h2>
+    <div class="card" style="padding:10px">${ddsHtml}</div>
+
+    <h2>Рассрочки</h2>
+    <div class="card">${loans.length ? loans.map(x => `
+      <div style="margin-bottom:12px">
+        <div class="row"><b>${esc(x.name)}</b><b>${tg0(x.left)}</b></div>
+        <div class="muted">осталось · ${x.paid} из ${x.count} платежей по ${tg0(x.pay)} · последний ${esc(x.lastM ? mLabel(x.lastM) : '')}</div>
+        <div class="bar"><i style="width:${x.count ? Math.round(x.paid / x.count * 100) : 0}%"></i></div>
+        ${x.note ? `<div class="muted">${esc(x.note)}</div>` : ''}
+      </div>`).join('') + `<div class="kv"><span>Всего осталось</span><b>${tg0(loansLeft)}</b></div><div class="kv"><span>Платёж в месяц</span><b>${tg0(loansPay)}</b></div>` : '<div class="muted">Рассрочек нет</div>'}</div>
+    <div class="muted" style="padding:0 6px">Факт по ${esc(mLabel(R.factTo))}. План 2026: средний месяц 2026 года с сезонностью; 2027: бюджет из модели.</div>`;
+
+  bindViews();
+  const pf = document.getElementById('pf'), pt = document.getElementById('pt');
+  pf.value = PFROM; pt.value = PTO;
+  pf.onchange = () => { PFROM = pf.value; if (PTO < PFROM) PTO = PFROM; drawReports(); };
+  pt.onchange = () => { PTO = pt.value; if (PFROM > PTO) PFROM = PTO; drawReports(); };
+  $app.querySelectorAll('[data-q]').forEach(b => b.onclick = () => {
+    const q = b.dataset.q;
+    if (q === 'last') PFROM = PTO = R.factTo;
+    else if (q === 'q') { PFROM = lastQ[0]; PTO = lastQ[lastQ.length - 1]; }
+    else { const y = q.slice(1); const inY = ms.filter(m => yearOf(m) === y); PFROM = inY[0]; PTO = inY[inY.length - 1]; }
+    drawReports();
+  });
+}
+
+// ---------- Переключатель разделов отчётов ----------
+let REPVIEW = 'fin';
+function viewChips() {
+  return `<div class="chips seg">${[['fin', 'Финансы'], ['staff', 'Сотрудники'], ['days', 'По дням'], ['years', 'По годам']]
+    .map(([k, t]) => `<button class="chip ${k === REPVIEW ? 'on' : ''}" data-v="${k}">${t}</button>`).join('')}</div>`;
+}
+function bindViews() { $app.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { REPVIEW = b.dataset.v; renderReports(); window.scrollTo(0, 0); }); }
+
+// ---------- Условия оплаты ----------
+const WD = { 'вс': 0, 'пн': 1, 'вт': 2, 'ср': 3, 'чт': 4, 'пт': 5, 'сб': 6 };
+function offDays(s) { return String(s || '').toLowerCase().split(/[,\s]+/).map(x => WD[x.slice(0, 2)]).filter(x => x !== undefined); }
+function ruleFor(rules, name, month) {
+  return rules.filter(r => r.name === name && r.from <= month).sort((a, b) => a.from < b.from ? 1 : -1)[0] || null;
+}
+function workdays(month, off) {
+  const [y, m] = month.split('-').map(Number), n = new Date(y, m, 0).getDate(), o = offDays(off);
+  let c = 0; for (let d = 1; d <= n; d++) if (!o.includes(new Date(y, m - 1, d).getDay())) c++;
+  return c;
+}
+function tabelShare(tabel, name, month, off) {
+  const t = (tabel || []).find(x => x.name === name && x.month === month);
+  if (!t) return 1;
+  const w = workdays(month, off);
+  return w ? Math.min(1, t.days / w) : 1;
+}
+
+// ---------- Сотрудники: положено и выплачено по месяцам ----------
+function drawStaff() {
+  const R = REP, ms = R.months, rules = R.staff || [];
+  const idx = ms.map((m, i) => i).filter(i => ms[i] >= PFROM && ms[i] <= PTO && ms[i] <= R.factTo);
+  const opts = ms.filter(m => m <= R.factTo).map(m => `<option value="${m}">${mLabel(m)}</option>`).join('');
+  const center = R.lines.find(l => l.sec === 'ОПиУ' && l.name === 'Услуги');
+  const sl = R.lines.filter(l => l.sec === 'Сотрудники');
+  const people = [...new Set(sl.map(l => l.grp))];
+  const cards = people.map(name => {
+    const serv = sl.find(l => l.grp === name && l.name === 'Услуги'), paid = sl.find(l => l.grp === name && l.name === 'Выплачено');
+    let s = 0, acc = 0, sal = 0, tgt = 0, bon = 0, pd = 0, anyPaid = false, role = '', pct = 0, cpct = 0;
+    idx.forEach(i => {
+      const m = ms[i], r = ruleFor(rules, name, m);
+      if (!r) return;
+      role = r.role; pct = r.pct; cpct = r.centerPct;
+      const sv = serv ? (serv.fact[i] || 0) : 0, share = tabelShare(R.tabel, name, m, r.off);
+      s += sv;
+      const own = sv * r.pct / 100, a = r.salary * share, b = r.target * share, c = (center && center.fact[i] || 0) * r.centerPct / 100 * share;
+      acc += own + a + b + c; sal += a; tgt += b; bon += c;
+      if (paid && paid.fact[i] !== null) { pd += paid.fact[i]; anyPaid = true; }
+    });
+    if (!role) return '';
+    const last = rules.filter(x => x.name === name).slice(-1)[0];
+    const diff = acc - pd;
+    return `<div class="card">
+      <div class="row"><b>${esc(name)}</b><span class="muted">${esc(role)}${last && last.off ? ' · выходные ' + esc(last.off) : ''}</span></div>
+      <div style="margin-top:6px">
+        ${s ? `<div class="kv"><span>Услуги (Altegio)</span><b>${tg0(s)}</b></div>` : ''}
+        ${s && pct ? `<div class="kv"><span>${pct}% от своих услуг</span><b>${tg0(s * pct / 100)}</b></div>` : ''}
+        ${sal ? `<div class="kv"><span>Оклад</span><b>${tg0(sal)}</b></div>` : ''}
+        ${tgt ? `<div class="kv"><span>Таргет</span><b>${tg0(tgt)}</b></div>` : ''}
+        ${bon ? `<div class="kv"><span>Бонус ${cpct}% от услуг центра</span><b>${tg0(bon)}</b></div>` : ''}
+        <div class="kv"><span><b>Положено</b></span><b class="gold">${tg0(acc)}</b></div>
+        ${anyPaid ? `<div class="kv"><span>Выплачено (журнал)</span><b>${tg0(pd)}</b></div>
+        <div class="kv"><span>${diff >= 0 ? 'Не доплачено' : 'Переплачено'}</span><b class="${Math.abs(diff) > 1000 ? 'over' : 'under'}">${tg0(Math.abs(diff))}</b></div>`
+        : `<div class="muted" style="margin-top:4px">${/собствен/i.test(role) ? 'Выплат в журнале нет: собственница берёт из прибыли.' : 'Выплат за период в журнале нет.'}</div>`}
+      </div></div>`;
+  }).join('');
+  $app.innerHTML = `
+    <h1>Отчёты · ${esc(ME.client.name)}</h1>
+    ${viewChips()}
+    <div class="period">
+      <label class="f" style="margin:0"><span>С месяца</span><select id="pf">${opts}</select></label>
+      <label class="f" style="margin:0"><span>По месяц</span><select id="pt">${opts}</select></label>
+    </div>
+    ${idx.length ? cards : '<div class="card muted">За этот период данных нет. Факт есть по ' + esc(mLabel(R.factTo)) + '.</div>'}
+    <div class="muted" style="padding:0 6px">Условия и выходные на листе «Сотрудники», отпуска на листе «Табель» в таблице клиента. Выплаты из журнала Дианы. Мастерам процент от услуг без предоплат.</div>`;
+  bindViews();
+  const pf = document.getElementById('pf'), pt = document.getElementById('pt');
+  if (PFROM > R.factTo) PFROM = R.factTo;
+  if (PTO > R.factTo) PTO = R.factTo;
+  pf.value = PFROM; pt.value = PTO;
+  pf.onchange = () => { PFROM = pf.value; if (PTO < PFROM) PTO = PFROM; drawStaff(); };
+  pt.onchange = () => { PTO = pt.value; if (PFROM > PTO) PFROM = PTO; drawStaff(); };
+}
+
+// ---------- По дням: записи Altegio ----------
+let DAYPER = 'week0', DAYDATA = null, DAYOPEN = '';
+const WDS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+function dayRange(k) {
+  const now = new Date(), d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (k === 'today') return [d0, d0];
+  if (k === 'yest') { const y = new Date(d0); y.setDate(y.getDate() - 1); return [y, y]; }
+  if (k === 'week0' || k === 'week1') {
+    const mon = new Date(d0); mon.setDate(d0.getDate() - ((d0.getDay() + 6) % 7) - (k === 'week1' ? 7 : 0));
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    return [mon, sun];
+  }
+  const a = new Date(d0.getFullYear(), d0.getMonth() - (k === 'month1' ? 1 : 0), 1);
+  return [a, new Date(a.getFullYear(), a.getMonth() + 1, 0)];
+}
+async function renderDays() {
+  const [a, b] = dayRange(DAYPER), from = ymd(a), to = ymd(b);
+  const head = `<h1>Отчёты · ${esc(ME.client.name)}</h1>${viewChips()}
+    <div class="chips">${[['today', 'Сегодня'], ['yest', 'Вчера'], ['week0', 'Эта неделя'], ['week1', 'Прошлая неделя'], ['month0', 'Этот месяц'], ['month1', 'Прошлый месяц']]
+      .map(([k, t]) => `<button class="chip ${k === DAYPER ? 'on' : ''}" data-dp="${k}">${t}</button>`).join('')}</div>`;
+  const bindHead = () => { bindViews(); $app.querySelectorAll('[data-dp]').forEach(x => x.onclick = () => { DAYPER = x.dataset.dp; DAYDATA = null; renderDays(); }); };
+  if (!DAYDATA || DAYDATA.from !== from || DAYDATA.to !== to) {
+    $app.innerHTML = head + '<div class="center"><div class="spin"></div>Загружаю записи из Altegio…</div>';
+    bindHead();
+    try { DAYDATA = await api('daily', { from, to }); }
+    catch (e) { if (e.message !== 'no_access') { $app.innerHTML = head + `<div class="card">${esc(e.message)}</div>`; bindHead(); } return; }
+    if (TAB !== 'reports' || REPVIEW !== 'days') return;
+  }
+  const D = DAYDATA, rules = D.staff || [], today = ymd(new Date());
+  const tot = D.days.reduce((s, d) => ({ sum: s.sum + d.sum, visits: s.visits + d.visits, noshow: s.noshow + d.noshow, planned: s.planned + d.planned }), { sum: 0, visits: 0, noshow: 0, planned: 0 });
+  const by = {};
+  D.days.forEach(d => Object.keys(d.staff).forEach(n => { const x = by[n] || (by[n] = { sum: 0, visits: 0 }); x.sum += d.staff[n].sum; x.visits += d.staff[n].visits; }));
+  const month = from.slice(0, 7);
+  const rows = Object.keys(by).sort((x, y) => by[y].sum - by[x].sum).map(n => {
+    const r = ruleFor(rules, n, month);
+    return `<tr><td>${esc(n)}<div class="muted">${by[n].visits} визитов</div></td><td class="n">${tg0(by[n].sum)}</td><td class="n gold">${r && r.pct ? tg0(by[n].sum * r.pct / 100) : ''}</td></tr>`;
+  }).join('');
+  // администратор: оклад и таргет по её рабочим дням + % от услуг центра за эти дни
+  const admins = [...new Set(rules.filter(r => r.salary || r.target || r.centerPct).map(r => r.name))].map(n => {
+    let acc = 0, days = 0;
+    for (let d = new Date(a); d <= b && ymd(d) <= today; d.setDate(d.getDate() + 1)) {
+      const m = ymd(d).slice(0, 7), r = ruleFor(rules, n, m);
+      if (!r || offDays(r.off).includes(d.getDay())) continue;
+      const w = workdays(m, r.off), day = D.days.find(x => x.date === ymd(d));
+      acc += (r.salary + r.target) / w + (day ? day.sum : 0) * r.centerPct / 100; days++;
+    }
+    return days ? `<tr><td>${esc(n)}<div class="muted">${days} ${plural(days, 'рабочий день', 'рабочих дня', 'рабочих дней')}</div></td><td class="n"></td><td class="n gold">${tg0(acc)}</td></tr>` : '';
+  }).join('');
+  const list = D.days.slice().reverse().map(d => {
+    const dt = new Date(d.date + 'T00:00:00'), open = DAYOPEN === d.date;
+    return `<div class="card doc" data-day="${d.date}" style="padding:12px">
+      <div class="row"><b>${dm(dt)} ${WDS[dt.getDay()]}</b><b>${tg0(d.sum)}</b></div>
+      <div class="muted">${d.visits} визитов${d.noshow ? ' · не пришли: ' + d.noshow : ''}${d.planned ? ' · ожидается ' + tg0(d.planned) : ''}</div>
+      ${open ? `<div style="margin-top:6px">${Object.keys(d.staff).map(n => `<div class="kv"><span>${esc(n)} · ${d.staff[n].visits}</span><b>${tg0(d.staff[n].sum)}</b></div>`).join('') || '<div class="muted">Пришедших нет</div>'}</div>` : ''}
+    </div>`;
+  }).join('');
+  $app.innerHTML = head + `
+    <div class="grid2">
+      <div class="card"><div class="muted">Выручка (услуги)</div><div class="big gold" style="font-size:22px">${tg0(tot.sum)}</div><div class="muted">${dm(a)}-${dm(b)}</div></div>
+      <div class="card"><div class="muted">Визиты</div><div class="big" style="font-size:22px">${tot.visits}</div><div class="muted">не пришли: ${tot.noshow}${tot.planned ? ' · ожидается ' + tg0(tot.planned) : ''}</div></div>
+    </div>
+    <h2>Мастера и ЗП за период</h2>
+    <div class="card" style="padding:10px"><table class="rep"><tbody>
+      <tr class="h"><td></td><td class="n">Услуги</td><td class="n">Положено</td></tr>
+      ${rows || '<tr><td class="muted" colspan="3">Записей нет</td></tr>'}${admins}
+    </tbody></table></div>
+    <h2>По дням</h2>
+    <div class="dlist">${list || '<div class="card muted">Записей нет</div>'}</div>
+    <div class="muted" style="padding:6px">Из записей Altegio: только пришедшие клиенты, без продажи товаров. Оклад и таргет администратора делятся на её рабочие дни месяца (по выходным на листе «Сотрудники»).</div>`;
+  bindHead();
+  $app.querySelectorAll('[data-day]').forEach(c => c.onclick = () => { DAYOPEN = DAYOPEN === c.dataset.day ? '' : c.dataset.day; renderDays(); });
+}
+
+// ---------- По годам ----------
+let YKIND = 'revenue';
+function drawYears() {
+  const Y = REP.years;
+  const head = `<h1>Отчёты · ${esc(ME.client.name)}</h1>${viewChips()}
+    <div class="chips">${[['revenue', 'Выручка'], ['visits', 'Визиты']].map(([k, t]) => `<button class="chip ${k === YKIND ? 'on' : ''}" data-yk="${k}">${t}</button>`).join('')}</div>`;
+  if (!Y) { $app.innerHTML = head + '<div class="card muted">Нет данных по годам</div>'; bindViews(); return; }
+  const data = Y[YKIND], years = Object.keys(data).sort(), last = years[years.length - 1], prev = years[years.length - 2];
+  const fmt = v => v === null || v === undefined ? '' : (YKIND === 'revenue' ? (v / 1e6).toFixed(2).replace('.', ',') : String(v));
+  const g = (x, y) => (x !== null && x !== undefined && y) ? Math.round((x - y) / y * 100) : null;
+  const filled = data[last].map((v, i) => v !== null ? i : -1).filter(i => i >= 0);
+  const ytd = y => filled.reduce((s, i) => s + (data[y][i] || 0), 0);
+  const rows = MSHORT.map((m, i) => {
+    const k = prev ? g(data[last][i], data[prev][i]) : null;
+    return `<tr><td>${m}</td>${years.map(y => `<td class="n">${fmt(data[y][i])}</td>`).join('')}<td class="n ${k === null ? '' : k < 0 ? 'over' : 'under'}">${k === null ? '' : (k > 0 ? '+' : '') + k + '%'}</td></tr>`;
+  }).join('');
+  const kt = prev ? g(ytd(last), ytd(prev)) : null;
+  $app.innerHTML = head + `
+    <div class="card" style="padding:10px"><table class="rep"><tbody>
+      <tr class="h"><td>${YKIND === 'revenue' ? 'млн ₸' : 'визитов'}</td>${years.map(y => `<td class="n">${y}</td>`).join('')}<td class="n">${last} к ${prev}</td></tr>
+      ${rows}
+      <tr class="g"><td>${MSHORT[filled[0]]}-${MSHORT[filled[filled.length - 1]]}</td>${years.map(y => `<td class="n">${fmt(ytd(y))}</td>`).join('')}<td class="n ${kt < 0 ? 'over' : 'under'}">${kt === null ? '' : (kt > 0 ? '+' : '') + kt + '%'}</td></tr>
+    </tbody></table></div>
+    <div class="muted" style="padding:0 6px">По записям Altegio (услуги и товары). Altegio ведётся с марта 2024 г. Итог сравнивает одинаковые месяцы.</div>`;
+  bindViews();
+  $app.querySelectorAll('[data-yk]').forEach(x => x.onclick = () => { YKIND = x.dataset.yk; drawYears(); });
+}
+
+// ====== Закупка (пока список остатков; заказ поставщику после инвентаризации) ======
+let BUYF = 'need';
+async function renderBuy() {
+  loading('Загружаю товары…');
+  let r;
+  try { r = await api('goods'); } catch (e) { if (e.message !== 'no_access') $app.innerHTML = `<div class="card">${esc(e.message)}</div>`; return; }
+  if (TAB !== 'buy') return;
+  const g = r.goods || [];
+  const grp = x => x.stock === null ? 'none' : x.stock < 0 ? 'neg' : x.stock === 0 ? 'zero' : (x.min > 0 && x.stock <= x.min) ? 'low' : 'ok';
+  const groups = [['need', 'Купить'], ['neg', 'В минусе'], ['zero', 'Закончилось'], ['low', 'Заканчивается'], ['ok', 'Есть'], ['all', 'Все']];
+  const cnt = k => k === 'all' ? g.length : k === 'need' ? g.filter(x => ['zero', 'low'].includes(grp(x))).length : g.filter(x => grp(x) === k).length;
+  const list = g.filter(x => BUYF === 'all' || (BUYF === 'need' ? ['zero', 'low'].includes(grp(x)) : grp(x) === BUYF))
+    .sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0));
+  const value = g.filter(x => x.stock > 0).reduce((s, x) => s + x.stock * (x.buy || 0), 0);
+  const cls = { neg: 'check-bad', zero: 'check-bad', low: 'gold', ok: 'muted', none: 'muted' };
+  $app.innerHTML = `
+    <h1>Закупка</h1>
+    <div class="grid2">
+      <div class="card"><div class="muted">Купить</div><div class="big gold" style="font-size:24px">${cnt('need')}</div><div class="muted">закончилось и заканчивается</div></div>
+      <div class="card"><div class="muted">В минусе</div><div class="big ${cnt('neg') ? 'check-bad' : ''}" style="font-size:24px">${cnt('neg')}</div><div class="muted">приход не внесён в Altegio</div></div>
+    </div>
+    ${ME.user.approver && value ? `<div class="card"><div class="kv"><span>Товар на складе по себестоимости</span><b>${money(Math.round(value))}</b></div></div>` : ''}
+    <div class="chips">${groups.map(([k, t]) => `<button class="chip ${k === BUYF ? 'on' : ''}" data-bf="${k}">${t} ${cnt(k)}</button>`).join('')}</div>
+    <div class="card" style="padding:6px 14px">${list.length ? list.map(x => `
+      <div class="lowitem"><span>${esc(x.title)}</span>
+        <span class="${cls[grp(x)]}" style="white-space:nowrap">${x.stock === null ? 'нет данных' : esc(x.stock) + ' ' + esc(x.unit)}${x.min ? ` <span class="muted">(мин. ${esc(x.min)})</span>` : ''}</span></div>`).join('')
+      : '<div class="muted" style="padding:8px 0">Пусто</div>'}</div>
+    <div class="notes">Заказ поставщику (как в видео) появится после инвентаризации: сейчас часть остатков в Altegio в минусе, а поставщики в Altegio не заведены. Минимальный остаток задаётся в карточке товара Altegio.</div>
+    <div class="muted" style="margin:8px 6px">Обновлено из Altegio: ${esc(r.synced || 'ещё не загружали')}</div>
+    ${ME.user.approver ? '<div class="btns"><button class="btn sec" id="sync">Обновить из Altegio</button></div>' : ''}`;
+  $app.querySelectorAll('[data-bf]').forEach(b => b.onclick = () => { BUYF = b.dataset.bf; renderBuy(); });
+  const sync = document.getElementById('sync');
+  if (sync) sync.onclick = async () => {
+    sync.disabled = true; sync.textContent = 'Загружаю товары и справочники…';
+    try { const x = await api('syncAltegio'); toast(`Загружено товаров: ${x.goods}`); renderBuy(); }
+    catch (e) { toast(e.message); sync.disabled = false; sync.textContent = 'Обновить из Altegio'; }
+  };
 }
 
 // ====== Сводка ======
@@ -168,15 +587,17 @@ async function renderHome() {
         <div style="margin-bottom:10px"><div class="row"><span>${esc(x.cat)}</span><b>${money(x.sum)}</b></div>
         <div class="bar"><i style="width:${Math.round(x.sum / max * 100)}%"></i></div></div>`).join('') : '<div class="muted">За этот месяц утверждённых документов нет</div>'}
       </div>
-      ${ME.user.approver ? `
-      <h2>Altegio: заканчиваются</h2>
-      <div class="card">${s.low.length ? s.low.map(g => `<div class="lowitem"><span>${esc(g.title)}</span><span class="check-bad">${esc(g.stock)} ${esc(g.unit)} (мин. ${esc(g.min)})</span></div>`).join('') : '<div class="muted">Нет позиций ниже минимального остатка</div>'}
-        <div class="muted" style="margin-top:8px">Обновлено: ${esc(s.goodsSynced || 'ещё не загружали')}</div>
-        <div class="btns"><button class="btn sec" id="sync">Обновить из Altegio</button></div>
-        ${ME.sheetUrl ? `<div class="btns"><button class="btn sec" id="sheet">Открыть таблицу</button></div>` : ''}
+      ${ME.user.approver && s.stock ? `
+      <h2>Склад (Altegio)</h2>
+      <div class="card stock">
+        <div class="muted">Товар на складе по себестоимости</div>
+        <div class="big">${money(Math.round(s.stock.value))}</div>
+        <div class="muted">${s.stock.positions} ${plural(s.stock.positions, 'позиция', 'позиции', 'позиций')} в наличии из ${s.stock.total}${s.stock.negative ? ` · <span class="check-bad">в минусе: ${s.stock.negative}</span>` : ''}${s.stock.noCost ? ` · без себестоимости: ${s.stock.noCost}` : ''}</div>
       </div>` : ''}
+      ${ME.user.approver ? `
+      ${ME.sheetUrl ? `<div class="btns"><button class="btn sec" id="sheet">Открыть таблицу</button></div>` : ''}` : ''}
       <h2>Последние</h2>
-      ${s.recent.map(docCard).join('') || '<div class="card muted">Документов пока нет</div>'}`;
+      ${s.recent.map(docRow).join('') || '<div class="card muted">Документов пока нет</div>'}`;
     const sel = document.getElementById('client');
     if (sel) sel.onchange = () => switchClient(sel.value);
     $app.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { MONTH = shiftMonth(MONTH, Number(b.dataset.m)); renderHome(); });
@@ -200,9 +621,31 @@ function docCard(d) {
     <div class="row"><b>${esc(d.counterparty || 'Контрагент не распознан')}</b><b>${money(d.total)}</b></div>
     <div class="row muted"><span>${esc(d.id)} · ${esc(d.kind || 'документ')}${d.number ? ' № ' + esc(d.number) : ''}${d.date ? ' от ' + esc(d.date) : ''}</span></div>
     <div class="row" style="margin-top:6px"><span class="muted">${esc(d.category || '')}</span>${badge(d.status)}</div>
+    ${d.check ? `<div class="${checkClass(d.check)}" style="font-size:12px;margin-top:4px">${esc(d.check)}</div>` : ''}
   </div>`;
 }
-function bindDocCards() { $app.querySelectorAll('.doc[data-id]').forEach(c => c.onclick = () => openDoc(c.dataset.id)); }
+// Карточка с кнопкой быстрого утверждения (для проверяющего, документы «На проверке»)
+function docRow(d) {
+  const quick = ME.user.approver && d.status === 'На проверке';
+  return quick ? `<div class="docrow">${docCard(d)}<button class="qa" data-qa="${esc(d.id)}" title="Утвердить">✓</button></div>` : docCard(d);
+}
+function bindUpload() { $app.querySelectorAll('[data-up]').forEach(b => b.onclick = () => go('upload')); }
+function bindDocCards() {
+  bindUpload();
+  $app.querySelectorAll('.doc[data-id]').forEach(c => c.onclick = () => openDoc(c.dataset.id));
+  $app.querySelectorAll('[data-qa]').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    b.disabled = true; b.textContent = '…';
+    try {
+      await api('approve', { id: b.dataset.qa });
+      haptic('success'); toast('Утверждено: ' + b.dataset.qa);
+      const row = b.closest('.docrow'); if (row) row.remove();
+    } catch (err) {
+      haptic('error'); toast(err.message + '. Откройте документ и проверьте поля.');
+      b.disabled = false; b.textContent = '✓';
+    }
+  });
+}
 
 // ====== Загрузка ======
 function renderUpload() {
@@ -216,7 +659,7 @@ function renderUpload() {
       <label class="f"><span>Комментарий (необязательно)</span><textarea id="comment" placeholder="например: оплатила наличными из кассы"></textarea></label>
       <div class="btns"><button class="btn" id="send" disabled>Отправить на распознавание</button></div>
     </div>
-    <div class="muted" style="padding:0 6px">Фото должно быть ровным и чётким, документ целиком в кадре. Распознавание занимает до минуты.</div>`;
+    <div class="muted" style="padding:0 6px">Фото должно быть ровным и чётким, документ целиком в кадре. Распознавание занимает до минуты. Одностраничный чек можно просто отправить фото в чат бота.</div>`;
   PENDING_FILES = [];
   document.getElementById('file').onchange = async e => {
     for (const f of e.target.files) {
@@ -275,14 +718,41 @@ async function sendUpload() {
 }
 
 // ====== Список ======
+let DPER = 'all', DOFF = 0;   // период списка: неделя, месяц или всё; DOFF = сдвиг назад
+function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function dm(d) { return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0'); }
+function docPeriod() {
+  const now = new Date();
+  if (DPER === 'week') {
+    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7) + DOFF * 7);
+    const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
+    return { from: ymd(mon), to: ymd(sun), label: dm(mon) + '-' + dm(sun) };
+  }
+  if (DPER === 'month') {
+    const a = new Date(now.getFullYear(), now.getMonth() + DOFF, 1), b = new Date(a.getFullYear(), a.getMonth() + 1, 0);
+    return { from: ymd(a), to: ymd(b), label: MONTHS[a.getMonth()] + ' ' + a.getFullYear() };
+  }
+  return { from: '', to: '', label: 'за всё время' };
+}
 async function renderDocs() {
   const filters = ['На проверке', 'Утверждён', 'Отклонён', 'Ошибка распознавания', 'Все'];
-  $app.innerHTML = `<h1>Документы</h1><div class="chips">${filters.map(f => `<button class="chip ${f === DOCFILTER ? 'on' : ''}" data-f="${f}">${f}</button>`).join('')}</div><div id="list"><div class="center"><div class="spin"></div></div></div>`;
+  const p = docPeriod();
+  $app.innerHTML = `<div class="row"><h1>Документы</h1><button class="btn" data-up style="width:auto;padding:9px 14px;font-size:14px">📷 Загрузить</button></div>
+    <div class="chips">${[['week', 'Неделя'], ['month', 'Месяц'], ['all', 'Всё время']].map(([k, t]) => `<button class="chip ${k === DPER ? 'on' : ''}" data-p="${k}">${t}</button>`).join('')}</div>
+    ${DPER !== 'all' ? `<div class="row" style="margin:0 2px 8px"><div class="monthsw"><button data-o="-1">‹</button><b>${esc(p.label)}</b><button data-o="1" ${DOFF >= 0 ? 'disabled' : ''}>›</button></div></div>` : ''}
+    <div class="chips">${filters.map(f => `<button class="chip ${f === DOCFILTER ? 'on' : ''}" data-f="${f}">${f}</button>`).join('')}</div>
+    <div id="list"><div class="center"><div class="spin"></div></div></div>`;
   $app.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { DOCFILTER = b.dataset.f; renderDocs(); });
+  bindUpload();
+  $app.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { DPER = b.dataset.p; DOFF = 0; renderDocs(); });
+  $app.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { DOFF = Math.min(0, DOFF + Number(b.dataset.o)); renderDocs(); });
   try {
-    const r = await api('list', { status: DOCFILTER });
+    const r = await api('list', { status: DOCFILTER, from: p.from, to: p.to });
     if (TAB !== 'docs') return;
-    document.getElementById('list').innerHTML = r.docs.map(docCard).join('') || '<div class="card muted">Пусто</div>';
+    const sum = r.docs.reduce((s, d) => s + (Number(d.total) || 0), 0);
+    document.getElementById('list').innerHTML = r.docs.length
+      ? `<div class="muted" style="margin:0 6px 8px">${r.docs.length} ${plural(r.docs.length, 'документ', 'документа', 'документов')} на ${money(sum)}${DOCFILTER === 'На проверке' && ME.user.approver ? ' · ✓ утверждает без открытия' : ''}</div><div class="dlist">${r.docs.map(docRow).join('')}</div>`
+      : '<div class="card muted">Пусто</div>';
     bindDocCards();
   } catch (e) { if (e.message !== 'no_access') document.getElementById('list').innerHTML = `<div class="card">${esc(e.message)}</div>`; }
 }
@@ -374,6 +844,8 @@ async function loadMe() {
   CLIENT = ME.client.code;
   localStorage.setItem('client', CLIENT);
   document.title = ME.client.name;
+  REP = null;
+  $nav.querySelector('[data-tab="reports"]').hidden = !ME.user.approver;
 }
 async function switchClient(code) {
   CLIENT = code;
@@ -385,8 +857,13 @@ async function switchClient(code) {
 async function start() {
   if (tg) {
     tg.ready(); tg.expand();
-    tg.BackButton.onClick(() => go(TAB));
-    try { tg.setHeaderColor('secondary_bg_color'); } catch (e) {}
+    tg.BackButton.onClick(() => go(TAB === 'upload' ? 'docs' : TAB));
+    try { tg.setHeaderColor('#0f1216'); tg.setBackgroundColor('#0f1216'); } catch (e) {}
+    try { if (tg.setBottomBarColor) tg.setBottomBarColor('#1a1e25'); } catch (e) {}
+    // На телефоне: на весь экран, как в видео (Telegram 8.0 и новее). Свайп вниз не закрывает приложение.
+    const mobile = ['ios', 'android', 'android_x'].includes(tg.platform);
+    try { if (mobile && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && tg.requestFullscreen) tg.requestFullscreen(); } catch (e) {}
+    try { if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } catch (e) {}
   }
   if (!tg || !tg.initData) {
     $app.innerHTML = '<div class="card center"><h1>Финансы с Арайлым</h1><p>Откройте приложение через бота в Telegram.</p></div>';
