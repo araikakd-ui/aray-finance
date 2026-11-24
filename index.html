@@ -424,7 +424,8 @@ function drawReports() {
   };
   // ДДС
   const dl = R.lines.filter(l => l.sec === 'ДДС');
-  const dIdx = idx.filter(i => dl.some(l => l.fact[i] !== null && l.grp !== 'Остаток на начало' && l.grp !== 'Остаток на конец'));
+  // только закрытые месяцы: строки текущего месяца по выпискам (Kaspi Pay, Halyk) живут в карточке «месяц по сегодня»
+  const dIdx = idx.filter(i => R.months[i] <= R.factTo && dl.some(l => l.fact[i] !== null && l.grp !== 'Остаток на начало' && l.grp !== 'Остаток на конец'));
   const dv = l => sumRange(l.fact, dIdx) || 0;
   const dGrp = g => dl.filter(l => l.grp === g && Math.abs(dv(l)) > 0).sort((a, b) => a.order - b.order);
   const dSum = g => dGrp(g).reduce((s, l) => s + dv(l), 0);
@@ -434,8 +435,16 @@ function drawReports() {
     const items = dGrp(grp);
     if (!items.length) return '';
     const k = 'd:' + grp, open = isOpen(k);
-    return `<tr class="g tg" data-tg="${k}"><td>${arrow(open)}${title}</td><td class="n">${tg0(dSum(grp))}</td></tr>`
-      + (open ? items.map(l => `<tr class="sub"><td>${esc(l.name)}</td><td class="n">${tg0(dv(l))}</td></tr>`).join('') : '');
+    const line = (l, pad) => `<tr class="sub"><td${pad ? ' style="padding-left:28px"' : ''}>${esc(l.name)}</td><td class="n">${tg0(dv(l))}</td></tr>`;
+    let body = items.map(l => line(l)).join('');
+    if (grp === 'Поступления') {
+      // услуги одной строкой с итогом (раскрывается по видам), товары и прочее отдельно
+      const notServ = l => /товар|прочие поступления|по выписке|терминал/i.test(l.name);
+      const serv = items.filter(l => !notServ(l)), rest = items.filter(notServ), ks = 'd:serv', os = isOpen(ks);
+      body = (serv.length ? `<tr class="sub tg" data-tg="${ks}"><td>${arrow(os)}<b>Услуги</b></td><td class="n"><b>${tg0(serv.reduce((a, l) => a + dv(l), 0))}</b></td></tr>`
+        + (os ? serv.map(l => line(l, true)).join('') : '') : '') + rest.map(l => line(l)).join('');
+    }
+    return `<tr class="g tg" data-tg="${k}"><td>${arrow(open)}${title}</td><td class="n">${tg0(dSum(grp))}</td></tr>` + (open ? body : '');
   };
   const ddsHtml = dIdx.length ? `
     <table class="rep"><tbody>
@@ -466,7 +475,7 @@ function drawReports() {
 
     <div class="grid2">
       <div class="card"><div class="muted">Выручка</div><div class="big" style="font-size:20px">${hasFact ? tg0(F.rev) : 'нет факта'}</div><div class="muted">план ${tg0(P.rev)} ${dev(F.rev, P.rev, true)}</div></div>
-      <div class="card"><div class="muted">Чистая прибыль</div><div class="big" style="font-size:20px">${hasFact ? tg0(F.net) : 'нет факта'}</div><div class="muted">план ${tg0(P.net)} ${dev(F.net, P.net, true)}</div></div>
+      <div class="card"><div class="muted">Чистая прибыль</div><div class="big" style="font-size:20px">${hasFact ? tg0(F.net) : 'нет факта'}</div><div class="muted">план ${tg0(P.net)} ${dev(F.net, P.net, true)}</div><div class="muted" style="font-size:11px">по записанным расходам, возможна погрешность</div></div>
     </div>
     <div class="card">
       <div class="kv"><span>ЗП Меруерт (35% её услуг)</span><b>${tg0(hasFact ? F.zp : P.zp)}</b></div>
@@ -552,7 +561,7 @@ function drawMain() {
     <div class="grid2">
       <div class="card doc" data-go="fin"><div class="muted">Выручка</div><div class="big" style="font-size:20px">${tg0(F.rev)}</div>
         <div class="muted">${k(F.rev, P.rev, true)}</div>${yv !== null ? `<div class="muted">к ${MSHORT[mi]} ${y - 1}: <span class="${yv < 0 ? 'over' : 'under'}">${yv > 0 ? '+' : ''}${yv}%</span></div>` : ''}</div>
-      <div class="card doc" data-go="fin"><div class="muted">Чистая прибыль</div><div class="big" style="font-size:20px">${tg0(F.net)}</div><div class="muted">${k(F.net, P.net, true)}</div></div>
+      <div class="card doc" data-go="fin"><div class="muted">Чистая прибыль</div><div class="big" style="font-size:20px">${tg0(F.net)}</div><div class="muted">${k(F.net, P.net, true)}</div><div class="muted" style="font-size:11px">по записанным расходам, возможна погрешность</div></div>
       <div class="card doc" data-go="fin"><div class="muted">Операционная прибыль</div><div class="big" style="font-size:20px">${tg0(F.ebitda)}</div><div class="muted">${k(F.ebitda, P.ebitda, true)}</div></div>
       <div class="card doc" data-go="fin">${moneyCard}</div>
     </div>
@@ -579,32 +588,38 @@ function drawMain() {
 // ---------- Текущий месяц по сегодня: услуги Altegio, приход по выпискам, сколько кому положено ----------
 // Положено: % от своих услуг (Altegio, мастер ищется по первому слову имени) + оклад и таргет за прошедшие рабочие дни
 // + бонус % от услуг центра. Условия с листа «Сотрудники».
+function payList(days, rules, m, now) {
+  const serv = days.reduce((s, x) => s + x.sum, 0), byFirst = {};
+  days.forEach(x => Object.entries(x.staff || {}).forEach(([n, v]) => { const k = n.trim().split(/\s+/)[0].toLowerCase(); byFirst[k] = (byFirst[k] || 0) + v.sum; }));
+  return [...new Set(rules.map(r => r.name))].map(n => {
+    const r = ruleFor(rules, n, m);
+    if (!r || /уволен/i.test(r.note || '')) return null;
+    const own = (byFirst[n.trim().split(/\s+/)[0].toLowerCase()] || 0);
+    const wAll = workdays(m, r.off), o = offDays(r.off);
+    let wPast = 0; for (let k = 1; k <= now.getDate(); k++) if (!o.includes(new Date(now.getFullYear(), now.getMonth(), k).getDay())) wPast++;
+    const part = wAll ? wPast / wAll : 1;
+    const p = own * r.pct / 100 + (r.salary + r.target) * part + serv * r.centerPct / 100;
+    return p >= 1 ? { n, own, p, r } : null;
+  }).filter(Boolean).sort((x, y) => y.p - x.p);
+}
+function payHtml(ppl) {
+  return ppl.map(x => `<div class="kv"><span>${esc(x.n)}<span class="muted">${x.own ? ' · услуги ' + tg0(x.own) + ' × ' + x.r.pct + '%' : ''}${x.r.salary || x.r.target ? ' · ' + [x.r.salary ? 'оклад' : '', x.r.target ? 'таргет' : ''].filter(Boolean).join(' и ') + ' за прошедшие рабочие дни' : ''}${x.r.centerPct ? ' · бонус ' + x.r.centerPct + '%' : ''}</span></span><b>${tg0(x.p)}</b></div>`).join('');
+}
 function curMonthCard() { return `<div class="card" id="cm"><div class="row"><span class="muted">${MONTHS[new Date().getMonth()]} по сегодня (Altegio)</span><b>…</b></div></div>`; }
 async function fillCurMonth() {
-  const now = new Date(), m = monthNow(), a = new Date(now.getFullYear(), now.getMonth(), 1), data = { from: ymd(a), to: ymd(now) }, key = ckey('daily', data);
+  const now = new Date(), m = monthNow(), a = new Date(now.getFullYear(), now.getMonth(), 1), data = { from: ymd(a), to: ymd(now), goods: 1 }, key = ckey('daily', data);
   const put = d => {
     const el = document.getElementById('cm');
     if (!el || !d) return;
-    const R = REP, rules = (R && R.staff) || [], i = R ? R.months.indexOf(m) : -1;
+    const R = REP, rules = (R && R.staff) || d.staff || [], i = R ? R.months.indexOf(m) : -1;
     const serv = d.days.reduce((s, x) => s + x.sum, 0), vis = d.days.reduce((s, x) => s + x.visits, 0);
-    const byFirst = {};
-    d.days.forEach(x => Object.entries(x.staff || {}).forEach(([n, v]) => { const k = n.trim().split(/\s+/)[0].toLowerCase(); byFirst[k] = (byFirst[k] || 0) + v.sum; }));
     const inc = i >= 0 ? R.lines.filter(l => l.sec === 'ДДС' && l.grp === 'Поступления' && l.fact[i]).map(l => [l.name, l.fact[i]]) : [];
-    const names = [...new Set(rules.map(r => r.name))];
-    const ppl = names.map(n => {
-      const r = ruleFor(rules, n, m);
-      if (!r || /уволен/i.test(r.note || '')) return null;
-      const own = (byFirst[n.trim().split(/\s+/)[0].toLowerCase()] || 0);
-      const wAll = workdays(m, r.off), o = offDays(r.off);
-      let wPast = 0; for (let k = 1; k <= now.getDate(); k++) if (!o.includes(new Date(now.getFullYear(), now.getMonth(), k).getDay())) wPast++;
-      const part = wAll ? wPast / wAll : 1;
-      const p = own * r.pct / 100 + (r.salary + r.target) * part + serv * r.centerPct / 100;
-      return p >= 1 ? { n, own, p, r } : null;
-    }).filter(Boolean).sort((x, y) => y.p - x.p);
+    const ppl = payList(d.days, rules, m, now);
     el.innerHTML = `<div class="row"><span class="muted">${MONTHS[now.getMonth()]} по сегодня (Altegio)</span><b>${tg0(serv)}</b></div>
-      <div class="muted">${dm(a)}-${dm(now)} · ${vis} ${plural(vis, 'визит', 'визита', 'визитов')} · только услуги, без товаров</div>
+      <div class="muted">${dm(a)}-${dm(now)} · ${vis} ${plural(vis, 'визит', 'визита', 'визитов')}${d.goods && d.goods.sum !== null ? '' : ' · только услуги, без товаров'}</div>
+      ${d.goods && d.goods.sum !== null ? `<div class="kv" style="margin-top:6px"><span>Услуги</span><b>${tg0(serv)}</b></div><div class="kv"><span>Товары</span><b>${tg0(d.goods.sum)}</b></div><div class="kv"><span><b>Итого выручка</b></span><b class="gold">${tg0(serv + d.goods.sum)}</b></div>` : ''}
       ${inc.length ? `<div style="margin-top:8px"><div class="muted">Пришло на счета (по выпискам)</div>${inc.map(([n, v]) => `<div class="kv"><span>${esc(n)}</span><b>${tg0(v)}</b></div>`).join('')}<div class="muted">Наличные по журналу Дианы ещё не внесены.</div></div>` : ''}
-      ${ppl.length ? `<div style="margin-top:8px"><div class="muted">Положено на сегодня</div>${ppl.map(x => `<div class="kv"><span>${esc(x.n)}<span class="muted">${x.own ? ' · услуги ' + tg0(x.own) + ' × ' + x.r.pct + '%' : ''}${x.r.salary || x.r.target ? ' · ' + [x.r.salary ? 'оклад' : '', x.r.target ? 'таргет' : ''].filter(Boolean).join(' и ') + ' за прошедшие рабочие дни' : ''}${x.r.centerPct ? ' · бонус ' + x.r.centerPct + '%' : ''}</span></span><b>${tg0(x.p)}</b></div>`).join('')}<div class="muted">Выплаты за месяц ещё не внесены: сравним после журнала Дианы.</div></div>` : ''}`;
+      ${ppl.length ? `<div style="margin-top:8px"><div class="muted">Положено на сегодня</div>${payHtml(ppl)}<div class="muted">Выплаты за месяц ещё не внесены: сравним после журнала Дианы.</div></div>` : ''}`;
   };
   put(cget(key));
   try { const d = await api('daily', data); cput(key, d); put(d); }
@@ -666,7 +681,8 @@ function drawStaff() {
       role = r.role; pct = r.pct; cpct = r.centerPct;
       const sv = serv ? (serv.fact[i] || 0) : 0, share = tabelShare(R.tabel, name, m, r.off);
       s += sv;
-      const own = sv * r.pct / 100, a = r.salary * share, b = r.target * share, c = (center && center.fact[i] || 0) * r.centerPct / 100 * share;
+      const own = sv * r.pct / 100, a = r.salary * share, b = r.target * share, tb = (R.tabel || []).find(x => x.name === name && x.month === m), bShare = tb && /бонус полност/i.test(tb.note || '') ? 1 : share,
+        c = (center && center.fact[i] || 0) * r.centerPct / 100 * bShare;
       acc += own + a + b + c; sal += a; tgt += b; bon += c;
       if (paid && paid.fact[i] !== null) { pd += paid.fact[i]; anyPaid = true; }
     });
@@ -698,8 +714,9 @@ function drawStaff() {
       <label class="f" style="margin:0"><span>С месяца</span><select id="pf">${opts}</select></label>
       <label class="f" style="margin:0"><span>По месяц</span><select id="pt">${opts}</select></label>
     </div>
-    ${monthNow() > R.factTo ? curMonthCard() : ''}
+    <div class="muted" style="margin:0 6px 8px">За ${esc(mLabel(PFROM))} - ${esc(mLabel(PTO))}: положено и выплачено по журналу</div>
     ${idx.length ? cards : '<div class="card muted">За этот период данных нет. Факт есть по ' + esc(mLabel(R.factTo)) + '.</div>'}
+    ${monthNow() > R.factTo ? `<h2>${MONTHS[new Date().getMonth()]}: месяц ещё идёт</h2><div class="muted" style="margin:-4px 6px 8px">Не входит в период выше: журнала за этот месяц ещё нет, считаем по Altegio.</div>${curMonthCard()}` : ''}
     <div class="muted" style="padding:0 6px">Условия и выходные на листе «Сотрудники», отпуска на листе «Табель» в таблице клиента. Выплаты из журнала Дианы. Мастерам процент от услуг без предоплат.</div>`;
   bindViews();
   const pf = document.getElementById('pf'), pt = document.getElementById('pt');
@@ -794,7 +811,7 @@ function drawYears() {
     <div class="chips">${[['revenue', 'Выручка'], ['visits', 'Визиты']].map(([k, t]) => `<button class="chip ${k === YKIND ? 'on' : ''}" data-yk="${k}">${t}</button>`).join('')}</div>`;
   if (!Y) { $app.innerHTML = head + '<div class="card muted">Нет данных по годам</div>'; bindViews(); return; }
   const data = Y[YKIND], years = Object.keys(data).sort(), last = years[years.length - 1], prev = years[years.length - 2];
-  const fmt = v => v === null || v === undefined ? '' : (YKIND === 'revenue' ? (v / 1e6).toFixed(2).replace('.', ',') : String(v));
+  const fmt = v => v === null || v === undefined ? '' : (YKIND === 'revenue' ? Math.round(v / 1000).toLocaleString('ru-RU') : String(v));
   const g = (x, y) => (x !== null && x !== undefined && y) ? Math.round((x - y) / y * 100) : null;
   const filled = data[last].map((v, i) => v !== null ? i : -1).filter(i => i >= 0);
   const ytd = y => filled.reduce((s, i) => s + (data[y][i] || 0), 0);
@@ -805,7 +822,7 @@ function drawYears() {
   const kt = prev ? g(ytd(last), ytd(prev)) : null;
   $app.innerHTML = head + `
     <div class="card" style="padding:10px"><table class="rep"><tbody>
-      <tr class="h"><td>${YKIND === 'revenue' ? 'млн ₸' : 'визитов'}</td>${years.map(y => `<td class="n">${y}</td>`).join('')}<td class="n">${last} к ${prev}</td></tr>
+      <tr class="h"><td>${YKIND === 'revenue' ? 'тыс. ₸' : 'визитов'}</td>${years.map(y => `<td class="n">${y}</td>`).join('')}<td class="n">${last} к ${prev}</td></tr>
       ${rows}
       <tr class="g"><td>${MSHORT[filled[0]]}-${MSHORT[filled[filled.length - 1]]}</td>${years.map(y => `<td class="n">${fmt(ytd(y))}</td>`).join('')}<td class="n ${kt < 0 ? 'over' : 'under'}">${kt === null ? '' : (kt > 0 ? '+' : '') + kt + '%'}</td></tr>
     </tbody></table></div>
@@ -815,7 +832,7 @@ function drawYears() {
 }
 
 // ====== Личное: личные финансы собственницы по всем картам (видят только она и администратор) ======
-let PDATA = null, PM = '';            // PM = месяц ГГГГ-ММ или 'year'
+let PDATA = null, PM = '', PR = { f: '', t: '' }, PLIMALL = false;   // PM 'range' = свой период PR            // PM = месяц ГГГГ-ММ или 'year'
 const PORDER = ['Обязательные', 'Дети', 'Продукты', 'Импульсивные', 'Семья', 'Крупное', 'Не определено'];
 const PCOL = { 'Обязательные': '#2a78d6', 'Дети': '#1baf7a', 'Продукты': '#eda100', 'Импульсивные': '#e87ba4', 'Семья': '#6250d6', 'Крупное': '#eb6834', 'Не определено': '#898781' };
 const KCOL = ['#2a78d6', '#eb6834', '#1baf7a', '#6250d6', '#eda100'];
@@ -863,13 +880,16 @@ const PANS = [
   ['Траты', 'Обязательные', 'Транспорт и авто'],
   ['Траты', 'Дети', 'Ердос: на карту'], ['Траты', 'Дети', 'Еркеназ: на карту'], ['Траты', 'Дети', 'Асылым: на карту'],
   ['Траты', 'Дети', 'Ердос: обучение'], ['Траты', 'Дети', 'Еркеназ: обучение'], ['Траты', 'Дети', 'Асылым: обучение'],
-  ['Траты', 'Дети', 'Дети: общее (садик, школа, вещи)'], ['Траты', 'Продукты', 'Продукты'],
-  ['Траты', 'Импульсивные', 'Красота и одежда'], ['Траты', 'Импульсивные', 'Кафе, кофе, доставка еды'], ['Траты', 'Импульсивные', 'Маркетплейсы'],
+  ['Траты', 'Дети', 'Дети: общее (садик, школа, вещи)'], ['Траты', 'Продукты', 'Продукты (магазины)'],
+  ['Траты', 'Импульсивные', 'Красота и одежда'], ['Траты', 'Импульсивные', 'Кафе, кофе, доставка еды'], ['Траты', 'Импульсивные', 'Сладкое и выпечка'], ['Траты', 'Импульсивные', 'Маркетплейсы'],
   ['Траты', 'Импульсивные', 'Развлечения и подписки'],
   ['Траты', 'Семья', 'Помощь семье: мама'], ['Траты', 'Семья', 'Помощь семье: брат Медет'], ['Траты', 'Семья', 'Помощь семье: папа'],
-  ['Траты', 'Семья', 'Подарки'], ['Траты', 'Семья', 'Займы и переводы знакомым (нетто)'],
+  ['Траты', 'Семья', 'Подарки'], 
   ['Траты', 'Крупное', 'Поездки и путешествия'],
   ['Не траты', 'На центр с личной карты', 'Расходы центра (оплачено с личной карты)'], ['Не траты', 'Между своими картами', 'Между своими счетами'],
+  ['Не траты', 'Долги и обмен', 'Дала в долг'], ['Не траты', 'Долги и обмен', 'Вернули долг'],
+  ['Не траты', 'Долги и обмен', 'Перевела, мне дали наличными'], ['Не траты', 'Долги и обмен', 'Мне перевели, я дала наличными'],
+  ['Не траты', 'Долги и обмен', 'Перевела, мне вернули на другую карту'],
   ['Не траты', 'Наличные (ЗП, аренда, кредит Медета)', 'Снятие наличных'],
   ['Пришло', 'От центра', 'Оплата клиента за услуги'], ['Пришло', 'Прочие поступления', 'Переводы от семьи'], ['Пришло', 'Прочие поступления', 'Возврат долга мне'], ['Траты', 'Не определено', 'Кэшбэк Freedom'],
 ];
@@ -928,13 +948,15 @@ function drawPersonal() {
   loadOpen();
   const D = Object.assign({}, PDATA, { rows: personalRows(PDATA) }), ms = [...new Set(D.rows.map(r => r.m))].sort();
   if (!ms.length) { $app.innerHTML = `<h1>Личное</h1><div class="card muted">Данных пока нет. Их добавляет бухгалтер по выпискам карт.</div>`; return; }
-  if (!PM || (PM !== 'year' && !ms.includes(PM))) PM = ms[ms.length - 1];
-  const sel = PM === 'year' ? ms : [PM];
+  if (!PM || (PM !== 'year' && PM !== 'range' && !ms.includes(PM))) PM = ms[ms.length - 1];
+  if (PM === 'range') { if (!ms.includes(PR.f)) PR.f = ms[0]; if (!ms.includes(PR.t)) PR.t = ms[ms.length - 1]; if (PR.f > PR.t) PR.t = PR.f; }
+  const sel = PM === 'year' ? ms : PM === 'range' ? ms.filter(m => m >= PR.f && m <= PR.t) : [PM];
+  const many = sel.length > 1;
   const S = f => D.rows.filter(r => sel.includes(r.m) && f(r)).reduce((s, r) => s + r.sum, 0);
   const came = S(r => r.sec === 'Пришло'), spent = -S(r => r.sec === 'Траты'), other = -S(r => r.sec === 'Не траты'), saved = -S(r => r.sec === 'Накопления');
   const pos = ms.indexOf(PM);
-  const title = PM === 'year' ? `${mLabel(ms[0])} - ${mLabel(ms[ms.length - 1])}` : MONTHS[Number(PM.slice(5)) - 1] + ' ' + PM.slice(0, 4);
-  const perMonth = PM === 'year' ? ` · в месяц ${tg0(spent / ms.length)}` : '';
+  const title = many ? `${mLabel(sel[0])} - ${mLabel(sel[sel.length - 1])}` : MONTHS[Number(sel[0].slice(5)) - 1] + ' ' + sel[0].slice(0, 4);
+  const perMonth = many ? ` · в месяц ${tg0(spent / sel.length)}` : '';
   // траты по группам
   const groups = PORDER.map(g => {
     const items = {};
@@ -944,7 +966,7 @@ function drawPersonal() {
   const lim = {};
   (D.ref || []).filter(x => x.kind === 'Лимит' && x.month > 0).forEach(x => { lim[x.name] = x.month; });
   const grpHtml = groups.map(x => {
-    const k = 'p:' + x.g, open = isOpen(k), l = PM !== 'year' && lim[x.g];
+    const k = 'p:' + x.g, open = isOpen(k), l = !many && lim[x.g];
     const its = Object.entries(x.items).filter(([, v]) => Math.abs(v) >= 1).sort((a, b) => b[1] - a[1]);
     return `<div class="kv tg" data-tg="${k}"><span>${arrow(open)}<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${PCOL[x.g]};margin-right:6px"></span>${esc(x.g)}</span><b>${tg0(x.tot)}</b></div>
       ${l ? `<div class="bar" style="margin:0 0 6px"><i style="width:${Math.min(100, x.tot / l * 100)}%;${x.tot > l ? 'background:var(--bad)' : ''}"></i></div><div class="muted" style="margin:-2px 0 6px">лимит ${tg0(l)}${x.tot > l ? ' · <span class="over">больше на ' + tg0(x.tot - l) + '</span>' : ''}</div>` : ''}
@@ -958,7 +980,7 @@ function drawPersonal() {
   D.rows.filter(r => sel.includes(r.m) && r.sec === 'Не траты').forEach(r => { nt[r.grp] = (nt[r.grp] || 0) - r.sum; });
   // дети
   const K = kidsPlan(D.ref || []);
-  const kidsNow = K && PM !== 'year' ? K.cols.find(c => c.key === PM) : null;
+  const kidsNow = K && !many ? K.cols.find(c => c.key === sel[0]) : null;
   // по каждому ребёнку за выбранный период: обучение, на карту, прочее (статьи «Имя: ...», «Дети: общее»)
   const KN = ['Ердос', 'Еркеназ', 'Асылым'], kt = {};
   D.rows.filter(r => sel.includes(r.m) && r.sec === 'Траты' && r.grp === 'Дети').forEach(r => {
@@ -994,16 +1016,22 @@ function drawPersonal() {
     </div>` : '');
   // кредиты
   const credits = (D.ref || []).filter(x => x.kind === 'Кредит');
+  // аренда квартиры и коммунальные: как в последнем полном месяце (текущий ещё не полный)
+  const fullM = ms.length > 1 ? ms[ms.length - 2] : ms[0];
+  const must = ['Аренда квартиры', 'Коммунальные и связь'].map(n => ({ n, v: -D.rows.filter(r => r.m === fullM && r.item === n).reduce((a, r) => a + r.sum, 0) })).filter(x => x.v > 0);
+  const mustTot = credits.reduce((a, x) => a + x.month, 0) + must.reduce((a, x) => a + x.v, 0);
   const credHtml = credits.length ? `<div class="card">${credits.map(x => {
     const end = x.from && x.count ? addM(x.from, x.count - 1) : '';
     const now = monthNow(), leftPays = end ? Math.max(0, Math.min(x.count, mDiff(now, end) + 1)) : 0;
     return `<div style="margin-bottom:10px"><div class="row"><b>${esc(x.name)}</b><b>${tg0(x.month)}/мес</b></div>
       <div class="muted">${x.left ? 'долг ' + tg0(x.left) + ' · ' : ''}${end ? 'до ' + mLabel(end) + (leftPays ? ', осталось ' + leftPays + ' ' + plural(leftPays, 'платёж', 'платежа', 'платежей') : '') : ''}${x.note ? (end || x.left ? ' · ' : '') + esc(x.note) : ''}</div></div>`;
-  }).join('')}<div class="kv"><span>Платежи в месяц</span><b>${tg0(credits.reduce((s, x) => s + x.month, 0))}</b></div></div>` : '';
+  }).join('')}${must.map(x => `<div style="margin-bottom:10px"><div class="row"><b>${esc(x.n)}</b><b>${tg0(x.v)}/мес</b></div><div class="muted">как в ${mLabel(fullM)}</div></div>`).join('')}<div class="kv"><span><b>Всего обязательных в месяц</b></span><b class="gold">${tg0(mustTot)}</b></div></div>` : '';
   $app.innerHTML = `
     <h1>Личное</h1>
-    <div class="row" style="margin:0 2px 8px"><div class="monthsw"><button data-pmv="-1" ${PM === 'year' || pos <= 0 ? 'disabled' : ''}>‹</button><b>${esc(title)}</b><button data-pmv="1" ${PM === 'year' || pos >= ms.length - 1 ? 'disabled' : ''}>›</button></div>
-      <button class="chip ${PM === 'year' ? 'on' : ''}" data-pyear>За год</button></div>
+    <div class="row" style="margin:0 2px 8px"><div class="monthsw"><button data-pmv="-1" ${many || pos <= 0 ? 'disabled' : ''}>‹</button><b>${esc(title)}</b><button data-pmv="1" ${many || pos >= ms.length - 1 ? 'disabled' : ''}>›</button></div>
+      <div style="display:flex;gap:6px"><button class="chip ${PM === 'year' ? 'on' : ''}" data-pyear>За год</button><button class="chip ${PM === 'range' ? 'on' : ''}" data-prange>Период</button></div></div>
+    ${PM === 'range' ? `<div class="period" style="margin-bottom:8px"><label class="f" style="margin:0"><span>С месяца</span><select id="prf">${ms.map(m => `<option value="${m}" ${m === PR.f ? 'selected' : ''}>${mLabel(m)}</option>`).join('')}</select></label>
+      <label class="f" style="margin:0"><span>По месяц</span><select id="prt">${ms.map(m => `<option value="${m}" ${m === PR.t ? 'selected' : ''}>${mLabel(m)}</option>`).join('')}</select></label></div>` : ''}
     ${PM === ms[ms.length - 1] ? '<div class="notes" style="margin-bottom:8px">Текущий месяц не полный: по выпискам на дату обновления.</div>' : ''}
     <div class="grid2">
       <div class="card"><div class="muted">Пришло</div><div class="big" style="font-size:20px">${tg0(came)}</div></div>
@@ -1016,11 +1044,14 @@ function drawPersonal() {
       <button class="chip ${RMODE === 'full' ? 'on' : ''}" data-mode="full">Подробно</button>
     </div>
     ${(D.todo || []).length ? block('ptodo', 'Вопросы и платежи', (D.todo.filter(t => !isDone(t)).length ? D.todo.filter(t => !isDone(t)).length + ' без ответа' : 'всё разобрано'), todoHtml(D)) : ''}
-    ${block('ptr', 'Траты по группам', tg0(spent), `<div class="card">${grpHtml || '<div class="muted">Трат нет</div>'}${Object.keys(lim).length ? '' : '<div class="muted" style="margin-top:6px">Раскройте группу ▸, чтобы поставить лимит в месяц.</div>'}</div>`)}
+    ${block('ptr', 'Траты по группам', tg0(spent), `<div class="card">${grpHtml || '<div class="muted">Трат нет</div>'}
+      <button class="btn sec" data-plimall style="margin-top:8px">${PLIMALL ? 'Скрыть лимиты' : '🎯 Лимиты в месяц'}</button>
+      ${PLIMALL ? `<div style="margin-top:8px">${PORDER.map(g => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><span style="flex:1">${esc(g)}</span><input data-pliml="${esc(g)}" inputmode="numeric" placeholder="без лимита" value="${lim[g] || ''}" style="width:45%;padding:6px"></div>`).join('')}
+        <button class="btn" data-plimsave>Сохранить лимиты</button><div class="muted" style="margin-top:4px">Лимит на месяц. Если траты больше, группа станет красной, а в «Сводке» появится предупреждение.</div></div>` : ''}</div>`)}
     ${block('pmon', 'По месяцам', '', `<div class="card"><div class="lg">${PORDER.map(g => `<span style="--c:${PCOL[g]}">${esc(g)}</span>`).join('')}</div>${stackBars(bars, ms.map(m => MSHORT[Number(m.slice(5)) - 1]), { on: PM })}<div class="muted" style="margin-top:6px">Нажмите на столбик, чтобы открыть месяц.</div></div>`)}
     ${kidsHtml ? block('pkids', 'Дети', tg0(kidsTot), kidsHtml) : ''}
-    ${credits.length ? block('pcred', 'Кредиты', tg0(credits.reduce((s, x) => s + x.month, 0)) + '/мес', credHtml) : ''}
-    ${block('pnot', 'Не личные траты', tg0(other), `<div class="card">${Object.entries(nt).filter(([, v]) => Math.abs(v) >= 1).map(([g, v]) => `<div class="kv"><span>${esc(g)}</span><b>${tg0(v)}</b></div>`).join('') || '<div class="muted">Нет</div>'}<div class="muted" style="margin-top:6px">Расходы центра с личной карты, наличные на ЗП, аренду и кредит Медета, обмен с Арайлым: в личные траты не входят.</div></div>`)}
+    ${credits.length ? block('pcred', 'Обязательные платежи', tg0(mustTot) + '/мес', credHtml) : ''}
+    ${block('pnot', 'Не личные траты', tg0(other), `<div class="card">${Object.entries(nt).filter(([, v]) => Math.abs(v) >= 1).map(([g, v]) => `<div class="kv"><span>${esc(g)}</span><b>${tg0(v)}</b></div>`).join('') || '<div class="muted">Нет</div>'}<div class="muted" style="margin-top:6px">Расходы центра с личной карты, наличные на ЗП, аренду и кредит Медета, долги и обмен (перевела, вернули): в личные траты не входят.</div></div>`)}
     <div class="muted" style="padding:0 6px">Kaspi Gold, Freedom, Halyk; обновлено бухгалтером по выпискам.</div>`;
   bindToggles(drawPersonal);
   bindTodo();
@@ -1033,6 +1064,19 @@ function drawPersonal() {
   });
   $app.querySelectorAll('[data-pmv]').forEach(b => b.onclick = () => { PM = ms[pos + Number(b.dataset.pmv)] || PM; drawPersonal(); });
   const y = $app.querySelector('[data-pyear]'); if (y) y.onclick = () => { PM = PM === 'year' ? ms[ms.length - 1] : 'year'; drawPersonal(); };
+  const rg = $app.querySelector('[data-prange]'); if (rg) rg.onclick = () => { if (PM === 'range') PM = ms[ms.length - 1]; else { PR = { f: ms[Math.max(0, ms.length - 3)], t: ms[ms.length - 1] }; PM = 'range'; } drawPersonal(); };
+  const prf = document.getElementById('prf'), prt = document.getElementById('prt');
+  if (prf) prf.onchange = () => { PR.f = prf.value; if (PR.t < PR.f) PR.t = PR.f; drawPersonal(); };
+  if (prt) prt.onchange = () => { PR.t = prt.value; if (PR.f > PR.t) PR.f = PR.t; drawPersonal(); };
+  const la = $app.querySelector('[data-plimall]'); if (la) la.onclick = () => { PLIMALL = !PLIMALL; const yy = window.scrollY; drawPersonal(); window.scrollTo(0, yy); };
+  const ls = $app.querySelector('[data-plimsave]'); if (ls) ls.onclick = async () => {
+    const ch = [];
+    $app.querySelectorAll('[data-pliml]').forEach(i => { const g = i.dataset.pliml, v = Math.round(Number(String(i.value).replace(/\s/g, '')) || 0); if (v !== (lim[g] || 0)) ch.push([g, v]); });
+    if (!ch.length) return toast('Ничего не изменилось');
+    ch.forEach(([g, v]) => { PDATA.ref = (PDATA.ref || []).filter(x => !(x.kind === 'Лимит' && x.name === g)); if (v) PDATA.ref.push({ kind: 'Лимит', name: g, month: v, from: '', count: 0, left: 0, note: '' }); });
+    PLIMALL = false; haptic('success'); toast('Лимиты сохранены'); drawPersonal();
+    try { for (const [g, v] of ch) await api('personalLimit', { group: g, value: v }); cput(ckey('personal', {}), PDATA); } catch (e) { toast('Не сохранилось: ' + e.message); }
+  };
   $app.querySelectorAll('[data-pm]').forEach(c => c.onclick = () => { if (ms.includes(c.dataset.pm)) { PM = c.dataset.pm; drawPersonal(); } });
 }
 
@@ -1063,7 +1107,7 @@ function drawBuy() {
       <div class="lowitem"><span>${esc(x.title)}</span>
         <span class="${cls[grp(x)]}" style="white-space:nowrap">${x.stock === null ? 'нет данных' : esc(x.stock) + ' ' + esc(unitRu(x.unit))}${x.min ? ` <span class="muted">(мин. ${esc(x.min)})</span>` : ''}</span></div>`).join('')
       : '<div class="muted" style="padding:8px 0">Пусто</div>'}</div>
-    <div class="notes">Заказ поставщику (как в видео) появится после инвентаризации: сейчас часть остатков в Altegio в минусе, а поставщики в Altegio не заведены. Минимальный остаток задаётся в карточке товара Altegio.</div>
+    <div class="notes">После инвентаризации здесь будет заказ поставщику: что и сколько купить. Пока остатки в Altegio неточные.</div>
     <div class="muted" style="margin:8px 6px">Обновлено из Altegio: ${esc(r.synced || 'ещё не загружали')}</div>
     ${ME.user.approver ? '<div class="btns"><button class="btn sec" id="sync">Обновить из Altegio</button></div>' : ''}`;
   $app.querySelectorAll('[data-bf]').forEach(b => b.onclick = () => { BUYF = b.dataset.bf; drawBuy(); });
@@ -1110,53 +1154,293 @@ function renderHome() {
   const month = MONTH;
   return load('summary', { month }, { wait: () => loading(), alive: () => TAB === 'home' && MONTH === month && !CUR, fail: failCard, draw: drawHome });
 }
+// «Что сегодня»: проверяющим (Арайлым, Меруерт) итоги Altegio, сколько кому положено и что требует внимания;
+// Диане кнопки загрузки, записи на завтра без подтверждения, её заработок за месяц и её документы.
+// Документы за месяц (как раньше) свёрнуты внизу.
+let TODAY = null;
 function drawHome(s) {
-  {
-    const [y, m] = MONTH.split('-');
-    const max = Math.max(1, ...s.byCat.map(x => x.sum));
-    const waitCount = s.counts['На проверке'] || 0;
-    $app.innerHTML = `
-      ${ME.clients.length > 1 ? `<select id="client" style="margin-bottom:10px;font-weight:600">${ME.clients.map(c => `<option value="${esc(c.code)}" ${c.code === ME.client.code ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>` : ''}
-      <div class="row"><h1>${esc(ME.client.name)}</h1>
-        <div class="monthsw"><button data-m="-1">‹</button><b>${MONTHS[Number(m) - 1]} ${y}</b><button data-m="1">›</button></div></div>
-      <div class="card hero doc" data-go="wait">
-        <div class="muted">Ждут проверки</div>
-        <div class="row"><div class="big">${waitCount} ${plural(waitCount, 'документ', 'документа', 'документов')}</div><div>›</div></div>
-        <div class="muted">на ${money(s.pending)} за месяц</div>
-      </div>
+  loadOpen();
+  const [y, m] = MONTH.split('-'), A = ME.user.approver, now = new Date();
+  const waitCount = s.counts['На проверке'] || 0, errCount = s.counts['Ошибка распознавания'] || 0, rejCount = s.counts['Отклонён'] || 0;
+  const max = Math.max(1, ...s.byCat.map(x => x.sum));
+  const docsHtml = `
+    <div class="row" style="margin:0 2px 8px"><span class="muted">Месяц</span><div class="monthsw"><button data-m="-1">‹</button><b>${MONTHS[Number(m) - 1]} ${y}</b><button data-m="1">›</button></div></div>
+    <div class="card hero doc" data-go="wait">
+      <div class="muted">Ждут проверки</div>
+      <div class="row"><div class="big">${waitCount} ${plural(waitCount, 'документ', 'документа', 'документов')}</div><div>›</div></div>
+      <div class="muted">на ${money(s.pending)} за месяц</div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="muted">Утверждено за месяц</div><div class="big" style="font-size:22px">${money(s.approved)}</div></div>
+      <div class="card"><div class="muted">Ошибки распознавания</div><div class="big" style="font-size:22px">${errCount}</div></div>
+    </div>
+    <h2>Расходы по статьям</h2>
+    <div class="card">${s.byCat.length ? s.byCat.map(x => `
+      <div style="margin-bottom:10px"><div class="row"><span>${esc(x.cat)}</span><b>${money(x.sum)}</b></div>
+      <div class="bar"><i style="width:${Math.round(x.sum / max * 100)}%"></i></div></div>`).join('') : '<div class="muted">За этот месяц утверждённых документов нет</div>'}
+    </div>
+    ${A && s.stock ? `
+    <h2>Склад (Altegio)</h2>
+    <div class="card stock">
+      <div class="muted">Товар на складе по себестоимости</div>
+      <div class="big">${money(Math.round(s.stock.value))}</div>
+      <div class="muted">${s.stock.positions} ${plural(s.stock.positions, 'позиция', 'позиции', 'позиций')} в наличии из ${s.stock.total}${s.stock.negative ? ` · <span class="check-bad">в минусе: ${s.stock.negative}</span>` : ''}${s.stock.noCost ? ` · без себестоимости: ${s.stock.noCost}` : ''}</div>
+    </div>` : ''}
+    ${A && ME.sheetUrl ? `<div class="btns"><button class="btn sec" id="sheet">Открыть таблицу</button></div>` : ''}
+    <h2>Последние</h2>
+    ${withOvr(s.recent).map(docRow).join('') || '<div class="card muted">Документов пока нет</div>'}`;
+  const head = `
+    ${ME.clients.length > 1 ? `<select id="client" style="margin-bottom:10px;font-weight:600">${ME.clients.map(c => `<option value="${esc(c.code)}" ${c.code === ME.client.code ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>` : ''}
+    <h1>Что сегодня</h1>
+    <div class="muted" style="margin:-6px 2px 10px">${esc(ME.client.name)} · ${now.getDate()} ${MONTHS_GEN[now.getMonth()]}, ${WDS_FULL[now.getDay()]}</div>`;
+  if (A) {
+    $app.innerHTML = head + `
+      <div class="card" id="tdAlt"><div class="row"><span class="muted">Сегодня (Altegio)</span><b>…</b></div></div>
+      <h2>Требует внимания</h2>
+      <div class="card" id="tdAttn">${attnHtml(s, TODAY)}</div>
+      <div id="tdTasks">${TODAY ? tasksHtml(TODAY, true) : ''}</div>
+      <h2>Касса</h2>
+      <div class="card" id="tdCash"><div class="muted">Считаю…</div></div>
+      ${(() => { const o = BLK.has('hdocs+');   // по умолчанию свёрнуто
+        return `<h2 class="tg blk" data-blk="hdocs+"><span>${arrow(o)}Документы за месяц</span>${o ? '' : `<span class="bsum">${money(s.approved)}</span>`}</h2>${o ? docsHtml : ''}`; })()}`;
+  } else {
+    $app.innerHTML = head + `
       <div class="grid2">
-        <div class="card"><div class="muted">Утверждено за месяц</div><div class="big" style="font-size:22px">${money(s.approved)}</div></div>
-        <div class="card"><div class="muted">Ошибки распознавания</div><div class="big" style="font-size:22px">${s.counts['Ошибка распознавания'] || 0}</div></div>
+        <button class="btn" data-up style="padding:16px 8px">📷 Загрузить чек</button>
+        <button class="btn sec" data-man style="padding:16px 8px">✍️ Расход без чека</button>
       </div>
-      <h2>Расходы по статьям</h2>
-      <div class="card">${s.byCat.length ? s.byCat.map(x => `
-        <div style="margin-bottom:10px"><div class="row"><span>${esc(x.cat)}</span><b>${money(x.sum)}</b></div>
-        <div class="bar"><i style="width:${Math.round(x.sum / max * 100)}%"></i></div></div>`).join('') : '<div class="muted">За этот месяц утверждённых документов нет</div>'}
+      <div id="tdTasks">${tasksHtml(TODAY, false)}</div>
+      <h2>Касса за сегодня</h2>
+      <div class="card" id="tdCash"><div class="muted">Считаю…</div></div>
+      <h2>Записи на завтра: подтвердить</h2>
+      <div class="card" id="tdUnc"><div class="muted">Загружаю из Altegio…</div></div>
+      <h2>Мой заработок за ${MONTHS[now.getMonth()].toLowerCase()}</h2>
+      <div class="card" id="tdMine"><div class="muted">Считаю…</div></div>
+      <h2>Мои документы</h2>
+      <div class="grid2">
+        <div class="card doc" data-go="wait"><div class="muted">На проверке</div><div class="big" style="font-size:22px">${waitCount}</div></div>
+        <div class="card doc" data-go="rej"><div class="muted">Отклонены</div><div class="big ${rejCount ? 'over' : ''}" style="font-size:22px">${rejCount}</div>${rejCount ? '<div class="muted">откройте, причина в документе</div>' : ''}</div>
       </div>
-      ${ME.user.approver && s.stock ? `
-      <h2>Склад (Altegio)</h2>
-      <div class="card stock">
-        <div class="muted">Товар на складе по себестоимости</div>
-        <div class="big">${money(Math.round(s.stock.value))}</div>
-        <div class="muted">${s.stock.positions} ${plural(s.stock.positions, 'позиция', 'позиции', 'позиций')} в наличии из ${s.stock.total}${s.stock.negative ? ` · <span class="check-bad">в минусе: ${s.stock.negative}</span>` : ''}${s.stock.noCost ? ` · без себестоимости: ${s.stock.noCost}` : ''}</div>
-      </div>` : ''}
-      ${ME.user.approver ? `
-      ${ME.sheetUrl ? `<div class="btns"><button class="btn sec" id="sheet">Открыть таблицу</button></div>` : ''}` : ''}
-      <h2>Последние</h2>
       ${withOvr(s.recent).map(docRow).join('') || '<div class="card muted">Документов пока нет</div>'}`;
-    const sel = document.getElementById('client');
-    if (sel) sel.onchange = () => switchClient(sel.value);
-    $app.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { MONTH = shiftMonth(MONTH, Number(b.dataset.m)); renderHome(); });
-    $app.querySelector('[data-go="wait"]').onclick = () => { DOCFILTER = 'На проверке'; go('docs'); };
-    bindDocCards();
-    const sync = document.getElementById('sync');
-    if (sync) sync.onclick = async () => {
-      sync.disabled = true; sync.textContent = 'Загружаю товары и справочники…';
-      try { const r = await api('syncAltegio'); toast(`Загружено товаров: ${r.goods}`); renderHome(); }
-      catch (e) { toast(e.message); sync.disabled = false; sync.textContent = 'Обновить из Altegio'; }
-    };
-    const sheet = document.getElementById('sheet');
-    if (sheet) sheet.onclick = () => tg ? tg.openLink(ME.sheetUrl) : window.open(ME.sheetUrl);
+  }
+  const sel = document.getElementById('client');
+  if (sel) sel.onchange = () => switchClient(sel.value);
+  $app.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { MONTH = shiftMonth(MONTH, Number(b.dataset.m)); renderHome(); });
+  $app.querySelectorAll('[data-go="wait"]').forEach(c => c.onclick = () => { DOCFILTER = 'На проверке'; go('docs'); });
+  $app.querySelectorAll('[data-go="rej"]').forEach(c => c.onclick = () => { DOCFILTER = 'Отклонён'; go('docs'); });
+  $app.querySelectorAll('[data-up]').forEach(b => b.onclick = () => go('upload'));
+  $app.querySelectorAll('[data-man]').forEach(b => b.onclick = () => go('manual'));
+  bindDocCards();
+  bindToggles(() => drawHome(s));
+  bindAttn();
+  bindTasks();
+  fillCash();
+  const sheet = document.getElementById('sheet');
+  if (sheet) sheet.onclick = () => tg ? tg.openLink(ME.sheetUrl) : window.open(ME.sheetUrl);
+  fillToday(s);
+}
+const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+const WDS_FULL = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+
+// Что требует внимания (проверяющим): только то, где есть что делать
+let UNC_OPEN = false;
+function attnHtml(s, t) {
+  const items = [];
+  const w = s.counts['На проверке'] || 0, e = s.counts['Ошибка распознавания'] || 0;
+  if (w) items.push(['📄 Документы на проверке', w, 'wait']);
+  if (e) items.push(['⚠️ Не распознались', e, 'err']);
+  if (s.low && s.low.length) items.push(['🛒 Заканчивается на складе', s.low.length, 'buy']);
+  const P = ME.user.personal ? (PDATA || cget(ckey('personal', {}))) : null;
+  if (P) {
+    const q = (P.todo || []).filter(x => !isDone(x)).length;
+    if (q) items.push(['❓ Вопросы и платежи без ответа', q, 'personal']);
+    const mm = monthNow(), rows = personalRows(P), lim = {};
+    (P.ref || []).filter(x => x.kind === 'Лимит' && x.month > 0).forEach(x => { lim[x.name] = x.month; });
+    Object.keys(lim).forEach(g => {
+      const spent = -rows.filter(r => r.m === mm && r.sec === 'Траты' && r.grp === g).reduce((a, r) => a + r.sum, 0);
+      if (spent > lim[g]) items.push([`💸 Лимит «${g}» превышен на ${tg0(spent - lim[g])}`, '', 'personal']);
+    });
+  }
+  const unc = t && t.unconfirmed ? t.unconfirmed : [];
+  if (unc.length) items.push(['📞 Не подтвердили запись на завтра', unc.length, 'unc']);
+  const open = t && t.tasks ? t.tasks.filter(x => !x.done).length : 0;
+  if (open) items.push(['📝 Задачи сотрудникам не выполнены', open, 'tasks']);
+  if (!items.length) return t ? '<div class="under">Всё в порядке ✓</div>' : '<div class="muted">Проверяю…</div>';
+  return items.map(([title, n, go]) => `<div class="kv doc" data-attn="${go}" style="padding:8px 0"><span>${esc(title)}</span><b>${n}${n === '' ? '' : ' ›'}</b></div>`
+    + (go === 'unc' && UNC_OPEN ? uncHtml(unc) : '')).join('');
+}
+// Задачи и замечания: сотруднику свои открытые с кнопкой «Сделано»; проверяющим все + форма «Новая задача»
+function tasksHtml(t, A) {
+  if (!t) return '';
+  const list = (t.tasks || []).slice().sort((a, b) => (!!a.done - !!b.done));
+  const row = x => `<div style="border-top:1px solid var(--line);padding:8px 0" data-task="${esc(x.id)}">
+    <div class="row"><span ${x.done ? 'class="muted" style="text-decoration:line-through"' : ''}>${esc(x.text)}</span>
+      ${x.done ? (A ? `<button class="chip" data-tundo>вернуть</button>` : '') : `<button class="chip on" data-tdone>Сделано</button>`}</div>
+    <div class="muted">${A ? esc(x.to) + ' · ' : ''}${x.due ? 'срок ' + esc(x.due) + ' · ' : ''}от ${esc(x.by)} ${esc(x.at)}${x.done ? ' · ✓ ' + esc(x.done) + (x.doneBy ? ' (' + esc(x.doneBy) + ')' : '') : ''}</div></div>`;
+  if (!A) return list.length ? `<h2>Задачи и замечания</h2><div class="card">${list.map(row).join('')}</div>` : '';
+  const ppl = t.people || [];
+  return `<h2>Задачи сотрудникам</h2><div class="card">
+    <div class="muted" style="margin-bottom:6px">Сотрудник видит задачу у себя в «Сводке» и получает сообщение от бота. Отметит «Сделано», вам придёт уведомление.</div>
+    <select id="tkTo">${ppl.concat(['Все']).map(n => `<option>${esc(n)}</option>`).join('')}</select>
+    <input id="tkText" placeholder="задача или замечание" style="margin-top:6px">
+    <div style="display:flex;gap:6px;margin-top:6px"><input id="tkDue" type="date" style="flex:1"><button class="btn" id="tkAdd" style="width:auto;padding:8px 14px">Поставить</button></div>
+    ${list.length ? list.slice(0, 30).map(row).join('') : '<div class="muted" style="margin-top:8px">Задач пока нет</div>'}</div>`;
+}
+function bindTasks() {
+  const rd = () => {
+    const el = document.getElementById('tdTasks'); if (el) { el.innerHTML = tasksHtml(TODAY, ME.user.approver); bindTasks(); }
+    const at = document.getElementById('tdAttn'); if (at && LASTSUM) { at.innerHTML = attnHtml(LASTSUM, TODAY); bindAttn(); }
+  };
+  $app.querySelectorAll('[data-tdone],[data-tundo]').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const id = b.closest('[data-task]').dataset.task, x = TODAY.tasks.find(q => q.id === id), undo = b.hasAttribute('data-tundo'), old = x.done;
+    x.done = undo ? '' : new Date().toLocaleDateString('ru-RU'); x.doneBy = ME.user.name;
+    if (!undo && !ME.user.approver) TODAY.tasks = TODAY.tasks.filter(q => q.id !== id);
+    haptic('success'); rd(); cput(ckey('today', {}), TODAY);
+    try { await api('taskDone', { id, undo }); } catch (err) { x.done = old; toast('Не сохранилось: ' + err.message); }
+  });
+  const add = document.getElementById('tkAdd');
+  if (add) add.onclick = async () => {
+    const to = document.getElementById('tkTo').value, text = document.getElementById('tkText').value.trim(), dv = document.getElementById('tkDue').value;
+    if (!text) return toast('Напишите задачу');
+    const due = dv ? dv.split('-').reverse().join('.') : '';
+    add.disabled = true;
+    try {
+      const r = await api('taskAdd', { to, text, due });
+      TODAY.tasks.unshift({ id: r.id, to, text, due, by: ME.user.name, at: new Date().toLocaleDateString('ru-RU'), done: '', doneBy: '' });
+      cput(ckey('today', {}), TODAY); haptic('success'); toast('Задача поставлена'); rd();
+    } catch (err) { toast(err.message); add.disabled = false; }
+  };
+}
+function uncHtml(list) {
+  return list.map(x => `<div style="border-top:1px solid var(--line);padding:6px 0 6px 8px">
+    <div class="row"><b>${esc(x.time)} ${esc(x.client)}</b>${x.phone ? `<a href="tel:${esc(x.phone)}" style="color:var(--accent)">${esc(x.phone)}</a>` : ''}</div>
+    <div class="muted">${esc([x.staff, x.services].filter(Boolean).join(' · '))}</div></div>`).join('');
+}
+function bindAttn() {
+  $app.querySelectorAll('[data-attn]').forEach(c => c.onclick = () => {
+    const g = c.dataset.attn;
+    if (g === 'wait') { DOCFILTER = 'На проверке'; go('docs'); }
+    else if (g === 'err') { DOCFILTER = 'Ошибка распознавания'; go('docs'); }
+    else if (g === 'buy') go('buy');
+    else if (g === 'personal') go('personal');
+    else if (g === 'tasks') { const el = document.getElementById('tdTasks'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }
+    else if (g === 'unc') { UNC_OPEN = !UNC_OPEN; const el = document.getElementById('tdAttn'); if (el && TODAY) { el.innerHTML = attnHtml(LASTSUM, TODAY); bindAttn(); } }
+  });
+}
+
+// ---------- Касса за день ----------
+let CASH = null;
+function cashHtml(c) {
+  if (!c) return '<div class="muted">Считаю…</div>';
+  const A = ME.user.approver, S = a => a.reduce((x, y) => x + y.sum, 0);
+  const diffTxt = d => d === '' || d === null || d === undefined ? '' : Math.abs(d) < 1000 ? '<span class="under">сходится ✓</span>' : d < 0 ? `<span class="over">не хватает ${tg0(-d)}</span>` : `<span class="over">лишние ${tg0(d)}</span>`;
+  const per = c.from === c.today ? 'сегодня' : `с ${c.from.slice(8, 10)}.${c.from.slice(5, 7)}`;
+  let h = '';
+  if (c.first) h += '<div class="muted" style="margin-bottom:6px">Первый подсчёт: введите, сколько наличных сейчас в кассе. Со следующего дня приложение будет сверять.</div>';
+  else {
+    h += `<div class="kv"><span>Было в кассе (${esc(c.last.date.slice(8, 10))}.${esc(c.last.date.slice(5, 7))})</span><b>${tg0(c.last.sum)}</b></div>`;
+    h += c.revenue === null ? `<div class="muted">Наличная выручка из Altegio не пришла${c.revErr ? ': ' + esc(c.revErr) : ''}</div>` : `<div class="kv"><span>+ Наличными по Altegio ${per}</span><b>${tg0(c.revenue)}</b></div>`;
+    h += `<div class="kv"><span>− Расходы наличными (через бота)</span><b>${tg0(S(c.expenses))}</b></div>`;
+    h += c.expenses.map(x => `<div class="muted" style="padding-left:12px">${esc(x.what || x.id)} · ${tg0(x.sum)}</div>`).join('');
+    h += `<div class="kv"><span>− Забрала Меруерт</span><b>${tg0(S(c.taken))}</b></div>`;
+    if (c.expected !== null) h += `<div class="kv"><span><b>Должно быть в кассе</b></span><b class="gold">${tg0(c.expected)}</b></div>`;
+  }
+  if (c.counted) h += `<div class="kv" style="margin-top:6px"><span>Посчитано сегодня (${esc(c.counted.at)})</span><b>${tg0(c.counted.sum)}</b></div>${c.expected !== null && !c.first ? `<div style="text-align:right">${diffTxt(c.counted.sum - c.expected)}</div>` : ''}`;
+  h += `<div style="display:flex;gap:6px;margin-top:8px"><input id="cashSum" inputmode="numeric" placeholder="сколько сейчас в кассе, ₸"><button class="btn" id="cashSave" style="width:auto;padding:8px 12px">${c.counted ? 'Пересчитать' : 'Сохранить'}</button></div>`;
+  h += `<div style="display:flex;gap:6px;margin-top:6px"><input id="takeSum" inputmode="numeric" placeholder="Меруерт забрала, ₸"><button class="btn sec" id="takeSave" style="width:auto;padding:8px 12px">Записать</button></div>`;
+  h += '<div class="muted" style="margin-top:6px">Расходы наличными вносите через бота или «Расход без чека» со способом «Наличные», иначе касса не сойдётся.</div>';
+  if (A && c.history && c.history.length) h += `<div style="margin-top:8px"><div class="muted">Последние подсчёты</div>${c.history.map(x => `<div class="kv"><span>${esc(x.date.slice(8, 10))}.${esc(x.date.slice(5, 7))} · ${esc(x.by)}</span><b>${tg0(x.sum)}</b></div>`).join('')}</div>`;
+  return h;
+}
+function bindCash() {
+  const put = c => { CASH = c; cput(ckey('cash', {}), c); const el = document.getElementById('tdCash'); if (el) { el.innerHTML = cashHtml(c); bindCash(); } };
+  const go2 = async (kind, inputId, btnId) => {
+    const v = Math.round(Number(String(document.getElementById(inputId).value).replace(/\s/g, '')) || 0);
+    if (kind === 'take' && !v) return toast('Укажите сумму');
+    if (kind === 'count' && document.getElementById(inputId).value.trim() === '') return toast('Укажите, сколько в кассе');
+    const b = document.getElementById(btnId); b.disabled = true;
+    try {
+      const r = await api('cashSave', { kind, sum: v });
+      haptic('success'); put(r);
+      const d = r.saved && r.saved.diff;
+      toast(kind === 'take' ? 'Записано' : d === '' ? 'Сохранено' : Math.abs(d) < 1000 ? 'Касса сходится ✓' : d < 0 ? 'Не хватает ' + tg0(-d) + ': возможно, не записан расход' : 'Лишние ' + tg0(d));
+    } catch (e) { toast(e.message); b.disabled = false; }
+  };
+  const cs = document.getElementById('cashSave'); if (cs) cs.onclick = () => go2('count', 'cashSum', 'cashSave');
+  const ts = document.getElementById('takeSave'); if (ts) ts.onclick = () => go2('take', 'takeSum', 'takeSave');
+}
+async function fillCash() {
+  const key = ckey('cash', {});
+  const put = c => { if (!c || TAB !== 'home' || CUR) return; CASH = c; const el = document.getElementById('tdCash'); if (el && !el.contains(document.activeElement)) { el.innerHTML = cashHtml(c); bindCash(); } };
+  put(cget(key));
+  try { const c = await api('cash', {}); cput(key, c); put(c); }
+  catch (e) { const el = document.getElementById('tdCash'); if (el && !cget(key)) el.innerHTML = `<div class="muted">${esc(e.message)}</div>`; }
+}
+
+// Altegio и записи на завтра: подгружаются после экрана (прошлые цифры из памяти телефона сразу)
+let LASTSUM = null;
+async function fillToday(s) {
+  LASTSUM = s;
+  const key = ckey('today', {});
+  const put = t => {
+    if (!t || TAB !== 'home' || CUR) return;
+    TODAY = t;
+    const now = new Date(), m = monthNow();
+    if (ME.user.approver) {
+      const alt = document.getElementById('tdAlt');
+      if (alt && t.days) {
+        const td = t.days.find(x => x.date === t.today) || { sum: 0, visits: 0 };
+        const [wa] = dayRange('week0'), wFrom = ymd(wa);
+        const wk = t.days.filter(x => x.date >= wFrom), ms = t.days;
+        const S = L => L.reduce((a, x) => a + x.sum, 0), V = L => L.reduce((a, x) => a + x.visits, 0);
+        const ppl = payList(ms, t.staff || [], m, now);
+        alt.innerHTML = `
+          <div class="grid2" style="margin:0">
+            <div><div class="muted">Сегодня</div><b>${tg0(S([td]))}</b><div class="muted">${V([td])} ${plural(V([td]), 'визит', 'визита', 'визитов')}</div></div>
+            <div><div class="muted">Неделя${wFrom < m + '-01' ? ' (с 1-го)' : ''}</div><b>${tg0(S(wk))}</b><div class="muted">${V(wk)} ${plural(V(wk), 'визит', 'визита', 'визитов')}</div></div>
+          </div>
+          <div class="kv" style="margin-top:8px"><span>${MONTHS[now.getMonth()]} по сегодня: услуги</span><b>${tg0(S(ms))}</b></div>
+          ${t.goods && t.goods.sum !== null ? `<div class="kv"><span>Товары</span><b>${tg0(t.goods.sum)}</b></div><div class="kv"><span><b>Итого выручка</b></span><b class="gold">${tg0(S(ms) + t.goods.sum)}</b></div>` : ''}
+          ${ppl.length ? `<div class="muted" style="margin-top:6px">Положено на сегодня</div>${payHtml(ppl)}` : ''}
+          <div class="muted" style="margin-top:4px">${t.goods && t.goods.sum !== null ? 'По Altegio.' : 'Только услуги по записям Altegio, без товаров.'}</div>`;
+      } else if (alt && t.errDays) alt.innerHTML = `<div class="muted">Altegio: ${esc(t.errDays)}</div>`;
+      const at = document.getElementById('tdAttn');
+      if (at) { at.innerHTML = attnHtml(s, t); bindAttn(); }
+      const tk = document.getElementById('tdTasks');
+      if (tk && !tk.contains(document.activeElement)) { tk.innerHTML = tasksHtml(t, true); bindTasks(); }
+    } else {
+      const tk = document.getElementById('tdTasks');
+      if (tk) { tk.innerHTML = tasksHtml(t, false); bindTasks(); }
+      const u = document.getElementById('tdUnc');
+      if (u) u.innerHTML = t.errUnconfirmed ? `<div class="muted">Altegio: ${esc(t.errUnconfirmed)}</div>`
+        : t.unconfirmed.length ? `<div class="muted" style="margin-bottom:4px">${t.unconfirmed.length} ${plural(t.unconfirmed.length, 'запись', 'записи', 'записей')} без подтверждения. Позвоните или напишите клиенту.</div>${uncHtml(t.unconfirmed)}`
+          : '<div class="under">Все записи на завтра подтверждены ✓</div>';
+      const mi = document.getElementById('tdMine'), x = t.mine;
+      if (mi) {
+        if (!x) mi.innerHTML = '<div class="muted">Условий оплаты для вас на листе «Сотрудники» не нашла. Спросите Арайлым.</div>';
+        else {
+          const wAll = workdays(m, x.off), o = offDays(x.off);
+          let wPast = 0; for (let k = 1; k <= now.getDate(); k++) if (!o.includes(new Date(now.getFullYear(), now.getMonth(), k).getDay())) wPast++;
+          const part = x.tabelDays != null && wAll ? Math.min(1, x.tabelDays / wAll) : (wAll ? wPast / wAll : 1);
+          const sal = x.salary * part, tgt = x.target * part, tot = x.own + sal + tgt + x.bonus;
+          mi.innerHTML = `
+            ${x.own ? `<div class="kv"><span>${x.pct}% от своих услуг</span><b>${tg0(x.own)}</b></div>` : ''}
+            ${x.salary ? `<div class="kv"><span>Оклад за ${wPast} ${plural(wPast, 'рабочий день', 'рабочих дня', 'рабочих дней')} из ${wAll}</span><b>${tg0(sal)}</b></div>` : ''}
+            ${x.target ? `<div class="kv"><span>Таргет</span><b>${tg0(tgt)}</b></div>` : ''}
+            ${x.centerPct ? `<div class="kv"><span>Бонус ${x.centerPct}% от услуг центра</span><b>${tg0(x.bonus)}</b></div>` : ''}
+            <div class="kv"><span><b>Всего на сегодня</b></span><b class="gold">${tg0(tot)}</b></div>
+            <div class="muted" style="margin-top:4px">Бонус растёт вместе с услугами центра. Точная сумма за месяц после закрытия месяца.</div>`;
+        }
+      }
+    }
+  };
+  put(cget(key));
+  try { const t = await api('today', {}); cput(key, t); put(t); }
+  catch (e) { const el = document.getElementById(ME.user.approver ? 'tdAlt' : 'tdUnc'); if (el && !cget(key)) el.innerHTML = `<div class="muted">${esc(e.message)}</div>`; }
+  // вопросы и лимиты из «Личного»: если в памяти нет, подгрузить тихо
+  if (ME.user.personal && !PDATA && !cget(ckey('personal', {}))) {
+    try { const P = await api('personal', {}); cput(ckey('personal', {}), P); const at = document.getElementById('tdAttn'); if (at && TAB === 'home') { at.innerHTML = attnHtml(s, TODAY); bindAttn(); } } catch (e) { /* не критично */ }
   }
 }
 function plural(n, a, b, c) { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? b : c; }
