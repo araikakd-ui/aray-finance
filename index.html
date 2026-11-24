@@ -954,6 +954,7 @@ function drawPersonal() {
   const many = sel.length > 1;
   const S = f => D.rows.filter(r => sel.includes(r.m) && f(r)).reduce((s, r) => s + r.sum, 0);
   const came = S(r => r.sec === 'Пришло'), spent = -S(r => r.sec === 'Траты'), other = -S(r => r.sec === 'Не траты'), saved = -S(r => r.sec === 'Накопления');
+  const forCenter = -S(r => r.sec === 'Не траты' && r.grp === 'На центр с личной карты'), cashOut = -S(r => r.sec === 'Не траты' && /^Наличные/.test(r.grp));
   const pos = ms.indexOf(PM);
   const title = many ? `${mLabel(sel[0])} - ${mLabel(sel[sel.length - 1])}` : MONTHS[Number(sel[0].slice(5)) - 1] + ' ' + sel[0].slice(0, 4);
   const perMonth = many ? ` · в месяц ${tg0(spent / sel.length)}` : '';
@@ -1036,8 +1037,9 @@ function drawPersonal() {
     <div class="grid2">
       <div class="card"><div class="muted">Пришло</div><div class="big" style="font-size:20px">${tg0(came)}</div></div>
       <div class="card"><div class="muted">Личные траты</div><div class="big gold" style="font-size:20px">${tg0(spent)}</div><div class="muted">${perMonth.replace(' · ', '')}</div></div>
-      <div class="card"><div class="muted">На центр и наличные</div><div class="big" style="font-size:20px">${tg0(other)}</div><div class="muted">не личное</div></div>
-      <div class="card"><div class="muted">${saved >= 0 ? 'Отложено' : 'Снято с депозита'}</div><div class="big" style="font-size:20px">${tg0(Math.abs(saved))}</div><div class="muted">Kaspi Депозит</div></div>
+      <div class="card"><div class="muted">Оплатила за центр</div><div class="big" style="font-size:20px">${tg0(forCenter)}</div><div class="muted">реклама, материалы, ЗП с её карты</div></div>
+      <div class="card"><div class="muted">Наличные</div><div class="big" style="font-size:20px">${tg0(cashOut)}</div><div class="muted">сняла с карт. Не трата: на что ушли, уже учтено (ЗП и аренда в журнале центра, кредит Медета в тратах)</div></div>
+      <div class="card" style="grid-column:1 / -1"><div class="row"><span class="muted">${saved >= 0 ? 'Отложено на Kaspi Депозит' : 'Снято с Kaspi Депозита'}</span><b>${tg0(Math.abs(saved))}</b></div></div>
     </div>
     <div class="chips seg mode" style="margin-top:10px">
       <button class="chip ${RMODE === 'short' ? 'on' : ''}" data-mode="short">Кратко</button>
@@ -1264,7 +1266,7 @@ function attnHtml(s, t) {
   const unc = t && t.unconfirmed ? t.unconfirmed : [];
   if (unc.length) items.push(['📞 Не подтвердили запись на завтра', unc.length, 'unc']);
   const open = t && t.tasks ? t.tasks.filter(x => !x.done).length : 0;
-  if (open) items.push(['📝 Задачи сотрудникам не выполнены', open, 'tasks']);
+  if (open) items.push(['📝 Задачи не выполнены', open, 'tasks']);
   if (!items.length) return t ? '<div class="under">Всё в порядке ✓</div>' : '<div class="muted">Проверяю…</div>';
   return items.map(([title, n, go]) => `<div class="kv doc" data-attn="${go}" style="padding:8px 0"><span>${esc(title)}</span><b>${n}${n === '' ? '' : ' ›'}</b></div>`
     + (go === 'unc' && UNC_OPEN ? uncHtml(unc) : '')).join('');
@@ -1279,9 +1281,9 @@ function tasksHtml(t, A) {
     <div class="muted">${A ? esc(x.to) + ' · ' : ''}${x.due ? 'срок ' + esc(x.due) + ' · ' : ''}от ${esc(x.by)} ${esc(x.at)}${x.done ? ' · ✓ ' + esc(x.done) + (x.doneBy ? ' (' + esc(x.doneBy) + ')' : '') : ''}</div></div>`;
   if (!A) return list.length ? `<h2>Задачи и замечания</h2><div class="card">${list.map(row).join('')}</div>` : '';
   const ppl = t.people || [];
-  return `<h2>Задачи сотрудникам</h2><div class="card">
-    <div class="muted" style="margin-bottom:6px">Сотрудник видит задачу у себя в «Сводке» и получает сообщение от бота. Отметит «Сделано», вам придёт уведомление.</div>
-    <select id="tkTo">${ppl.concat(['Все']).map(n => `<option>${esc(n)}</option>`).join('')}</select>
+  return `<h2>Задачи</h2><div class="card">
+    <div class="muted" style="margin-bottom:6px">Задачи ставят Арайлым и Меруерт: Диане, друг другу или себе. Получатель видит задачу в «Сводке», бот присылает сообщение. Диана отметит «Сделано», вам придёт уведомление.</div>
+    <select id="tkTo">${ppl.map(n => `<option>${esc(n)}</option>`).join('')}</select>
     <input id="tkText" placeholder="задача или замечание" style="margin-top:6px">
     <div style="display:flex;gap:6px;margin-top:6px"><input id="tkDue" type="date" style="flex:1"><button class="btn" id="tkAdd" style="width:auto;padding:8px 14px">Поставить</button></div>
     ${list.length ? list.slice(0, 30).map(row).join('') : '<div class="muted" style="margin-top:8px">Задач пока нет</div>'}</div>`;
