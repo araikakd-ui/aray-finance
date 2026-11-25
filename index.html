@@ -1008,7 +1008,7 @@ function todoHtml(D) {
       <div class="row"><b>${esc(t.who)}</b><b class="${t.sum < 0 ? '' : 'under'}">${t.sum > 0 ? '+' : ''}${tg0(t.sum)}</b></div>
       <div class="muted">${esc(t.date)} · ${esc(t.bank)}${t.answer ? ' · <span class="under">' + esc(t.answer) + (t.by ? ' (' + esc(t.by) + ')' : '') + '</span>' : ''}</div>
       <select data-tans style="margin-top:6px">${opts(t, t.answer)}</select>
-      <div style="display:flex;gap:6px;margin-top:6px"><input data-tcom placeholder="что это? (если не знаете статью)" value="${esc(t.comment)}"><button class="btn" data-tsave style="width:auto;padding:8px 12px">Сохранить</button></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><input data-tcom placeholder="комментарий или что это" value="${esc(t.comment)}"><button class="btn" data-tsave style="width:auto;padding:8px 12px">Сохранить</button></div>
     </div>`).join('') : '<div class="muted" style="padding:8px 0">Всё разобрано 👍</div>'}
   </div>`;
 }
