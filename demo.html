@@ -293,7 +293,7 @@
   }
   window.demoPrice = showPrice;
 
-  function choose(mode) { sessionStorage.setItem('DEMO_MODE', mode); try { localStorage.clear(); } catch (e) {} location.reload(); }
+  function choose(mode) { sessionStorage.setItem('DEMO_MODE', mode); try { const th = localStorage.getItem('aray_theme'); localStorage.clear(); if (th) localStorage.setItem('aray_theme', th); } catch (e) {} location.reload(); }
   window.demoChoose = choose;
 
   function chooser() {
@@ -325,7 +325,7 @@
     app.prepend(b);
     b.querySelectorAll('[data-m]').forEach(x => x.onclick = () => { if (x.dataset.m !== MODE) choose(x.dataset.m); });
     b.querySelector('#demoP').onclick = showPrice;
-    b.querySelectorAll('[data-r]').forEach(x => x.onclick = () => { if (x.dataset.r !== ROLE) { sessionStorage.setItem('DEMO_ROLE', x.dataset.r); try { localStorage.clear(); } catch (e) {} location.reload(); } });
+    b.querySelectorAll('[data-r]').forEach(x => x.onclick = () => { if (x.dataset.r !== ROLE) { sessionStorage.setItem('DEMO_ROLE', x.dataset.r); try { const th = localStorage.getItem('aray_theme'); localStorage.clear(); if (th) localStorage.setItem('aray_theme', th); } catch (e) {} location.reload(); } });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -1506,6 +1506,8 @@ function drawHome(s) {
       </div>
       ${withOvr(s.recent).map(docRow).join('') || '<div class="card muted">Документов пока нет</div>'}`;
   }
+  $app.insertAdjacentHTML('beforeend', themeChips());
+  $app.querySelectorAll('[data-theme]').forEach(b => b.onclick = () => { setThemePref(b.dataset.theme); renderHome(); });
   const sel = document.getElementById('client');
   if (sel) sel.onchange = () => switchClient(sel.value);
   $app.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { MONTH = shiftMonth(MONTH, Number(b.dataset.m)); renderHome(); });
@@ -2043,9 +2045,17 @@ async function switchClient(code) {
 }
 
 // ====== Тема: темная или светлая, как в Telegram ======
+// Выбор пользователя хранится на телефоне: 'tg' (как в Telegram), 'dark', 'light'
+function themePref() { try { return localStorage.getItem('aray_theme') || 'tg'; } catch (e) { return 'tg'; } }
+function setThemePref(v) { try { localStorage.setItem('aray_theme', v); } catch (e) {} applyTheme(); }
+function themeChips() {
+  const p = themePref();
+  return `<h2>Тема</h2><div class="chips">${[['tg', 'Как в Telegram'], ['dark', 'Темная'], ['light', 'Светлая']]
+    .map(([k, t]) => `<button class="chip ${k === p ? 'on' : ''}" data-theme="${k}">${t}</button>`).join('')}</div>`;
+}
 function applyTheme() {
-  const q = new URLSearchParams(location.search).get('theme');
-  const light = q ? q === 'light' : !!(tg && tg.colorScheme === 'light');
+  const q = new URLSearchParams(location.search).get('theme'), p = themePref();
+  const light = q ? q === 'light' : p === 'tg' ? !!(tg && tg.colorScheme === 'light') : p === 'light';
   document.documentElement.classList.toggle('light', light);
   const bg = light ? '#f4f3ef' : '#0f1216', bar = light ? '#ffffff' : '#1a1e25';
   if (tg) {
