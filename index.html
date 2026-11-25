@@ -1181,10 +1181,11 @@ function drawPersonal() {
   const S0 = main ? scen(0) : null, SX = main ? scen(PEXTRA || 0) : null;
   const ML = m => MONTHS[Number(m.slice(5)) - 1].toLowerCase() + ' ' + m.slice(0, 4);
   // регулярные: статьи, которые есть в каждом из трех последних полных месяцев
+  const reg2 = full3.slice(-2);   // регулярное: было в двух последних закрытых месяцах подряд
   const regItems = {};
-  if (full3.length) D.rows.filter(r => full3.includes(r.m) && r.sec === 'Траты' && !/Не определено|Крупное/.test(r.grp) && r.sum < 0).forEach(r => {
+  if (reg2.length) D.rows.filter(r => reg2.includes(r.m) && r.sec === 'Траты' && !/Не определено|Крупное/.test(r.grp) && r.sum < 0).forEach(r => {
     const k = r.grp + '|' + r.item; (regItems[k] = regItems[k] || { g: r.grp, n: r.item, ms: new Set(), s: 0 }); regItems[k].ms.add(r.m); regItems[k].s -= r.sum; });
-  const regs = Object.values(regItems).filter(x => x.ms.size === full3.length && !/кредит|рассрочк|ипотек/i.test(x.n)).map(x => Object.assign(x, { avg: x.s / full3.length })).filter(x => x.avg >= 1000).sort((a, b) => b.avg - a.avg);
+  const regs = Object.values(regItems).filter(x => x.ms.size === reg2.length && !/кредит|рассрочк|ипотек/i.test(x.n)).map(x => Object.assign(x, { avg: x.s / reg2.length })).filter(x => x.avg >= 1000).sort((a, b) => b.avg - a.avg);
   const regTot = regs.reduce((a, x) => a + x.avg, 0) + credMonth;
   // план действий: отметки «сделано» хранятся на этом телефоне
   let PDONE = {}; try { PDONE = JSON.parse(localStorage.getItem('aray_plan_done') || '{}'); } catch (e) {}
@@ -1244,10 +1245,10 @@ function drawPersonal() {
 
   const regTab = `
     <div class="card"><div class="muted">Уходит каждый месяц регулярно</div><div class="big" style="font-size:24px">${tg0(regTot)}</div>
-      <div class="muted">${inc > 0 ? Math.round(regTot / inc * 100) + '% дохода · ' : ''}по ${full3.map(mLabel).join(', ')}</div></div>
+      <div class="muted">${inc > 0 ? Math.round(regTot / inc * 100) + '% дохода · ' : ''}по ${reg2.map(mLabel).join(', ')}</div></div>
     <h2>Кредиты и рассрочки</h2><div class="card">${credits.map(x => `<div class="kv"><span>${esc(x.name)}</span><b>${tg0(x.month)}</b></div>`).join('')}</div>
     <h2>Повторяются каждый месяц</h2><div class="card">${regs.map(x => `<div class="kv"><span><span class="dot" style="background:${PCOL[x.g] || '#898781'}"></span>${esc(x.n)}</span><b>${tg0(x.avg)}</b></div>`).join('') || '<div class="muted">Нет</div>'}
-      <div class="muted" style="margin-top:6px">Средняя сумма за месяц. Это статьи, которые были в каждом из трех месяцев: проверьте, все ли нужны (подписки, связь, такси).</div></div>`;
+      <div class="muted" style="margin-top:6px">Средняя сумма за месяц. Это статьи, которые были в обоих последних месяцах (новые постоянные платежи появляются сразу): проверьте, все ли нужны (подписки, связь, такси).</div></div>`;
 
   if (PONLY) {
     const att = tips.length ? `<h2>На что обратить внимание</h2><div class="card">${tips.map(t => `<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><span>${t.i}</span><span>${t.txt}</span></div>`).join('')}</div>` : '';
