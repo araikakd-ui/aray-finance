@@ -237,7 +237,7 @@
     .demo-bar{position:sticky;top:0;z-index:50;display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px 10px;margin:-4px -4px 8px;background:#2bb3a3;color:#fff;border-radius:0 0 12px 12px;font-size:13px}
     .demo-bar b{font-weight:600}.demo-bar button{background:rgba(255,255,255,.22);border:0;color:#fff;border-radius:8px;padding:5px 8px;font:inherit;white-space:nowrap}
     .demo-bar button.on{background:#fff;color:#1f6f66}
-    .demo-ov{position:fixed;inset:0;z-index:100;background:var(--bg2,#0f1216);display:flex;flex-direction:column;justify-content:center;padding:24px;gap:14px;overflow:auto}
+    .demo-ov{position:fixed;inset:0;z-index:100;background:var(--bg2,#0f1216);display:flex;flex-direction:column;justify-content:flex-start;padding:24px;gap:14px;overflow:auto}
     .demo-ov h1{margin:0 0 4px;font-size:24px}.demo-ov p{margin:0;color:var(--hint,#9aa0a6);line-height:1.4}
     .demo-card{background:var(--bg,#1a1e25);border-radius:16px;padding:16px;border:0;color:inherit;text-align:left;font:inherit}
     .demo-card b{display:block;font-size:18px;margin-bottom:4px}.demo-card span{color:var(--hint,#9aa0a6);font-size:14px;line-height:1.35}
@@ -258,7 +258,8 @@
     <table><tr><td colspan="2"><b>Личные финансы</b></td></tr><tr><td>за 1 месяц</td><td>25 000 тг</td></tr><tr><td>за 2-3 месяца</td><td>40 000 тг</td></tr><tr><td>с января 2026 г.</td><td>70 000 тг</td></tr>
     <tr><td colspan="2"><b>Личные финансы и бизнес</b></td></tr><tr><td>за 1 месяц</td><td>35 000 тг</td></tr><tr><td>за 2-3 месяца</td><td>60 000 тг</td></tr><tr><td>с января 2026 г.</td><td>100 000 тг</td></tr></table>
     <h3>Сопровождение в месяц</h3>
-    <p style="margin:0 0 6px">Каждый месяц разбираю выписки и чеки, отвечаю на вопросы, обновляю приложение и присылаю отчёт: сколько пришло, куда ушли деньги, сколько осталось.</p>
+    <p style="margin:0 0 6px">Каждый месяц разбираю выписки и чеки, отвечаю на вопросы, обновляю приложение и присылаю отчет: сколько пришло, куда ушли деньги, сколько осталось.</p>
+    <p style="margin:0 0 6px"><b>Зачем каждый месяц.</b> Мы все люди: через 1-2 недели легко забыть отправить чек боту или совсем забросить учет. Каждый месяц я сверяю выписки, нахожу пропущенное, задаю вопросы и держу вас на контроле. Так учет не бросается, а привычка закрепляется.</p>
     <table><tr><td>личные финансы</td><td>20 000 тг</td></tr><tr><td>личные финансы и бизнес</td><td>50 000 тг</td></tr></table>
     <h3>Дополнительно</h3>
     <table><tr><td>ОПиУ и ДДС бизнеса в Excel каждый месяц</td><td>+15 000 тг</td></tr><tr><td>Финансовая модель (прибыль, точка безубыточности, план на год)</td><td>от 100 000 тг</td></tr></table>
@@ -276,7 +277,15 @@
 
   function chooser() {
     const ov = document.createElement('div'); ov.className = 'demo-ov';
-    ov.innerHTML = `<h1>Финансы с Арайлым</h1><p>Пример: так будет выглядеть ваше приложение. Все цифры и имена вымышленные, изменения не сохраняются.</p>
+    ov.innerHTML = `<h1>Финансы с Арайлым</h1>
+      <div style="font-size:20px;font-weight:700;line-height:1.3">Деньги любят счет.<br><span style="color:#2bb3a3">Хотите копить, начните считать расходы.</span></div>
+      <div class="demo-card" style="cursor:default"><b style="font-size:16px">Привычка, а не таблица</b>
+        <span>Учет держится на маленьких шагах, по методу «Атомных привычек»:<br>
+        👀 <strong style="color:var(--text,#fff)">Заметно.</strong> Купили, сразу фото чека боту: 10 секунд.<br>
+        👌 <strong style="color:var(--text,#fff)">Просто.</strong> Можно голосом, по-русски или по-казахски, без таблиц.<br>
+        😊 <strong style="color:var(--text,#fff)">Приятно.</strong> В приложении сразу видно, сколько осталось до лимита и куда уходят деньги.<br>
+        🔁 <strong style="color:var(--text,#fff)">Не бросается.</strong> Раз в месяц я разбираю выписки, нахожу пропущенное и присылаю итог.</span></div>
+      <p>Ниже пример, как будет выглядеть ваше приложение. Все цифры и имена вымышленные, изменения не сохраняются.</p>
       <button class="demo-card" data-m="biz"><b>Для бизнеса</b><span>Салон, студия, ИП: что сегодня, касса за день, чеки и накладные через бота, закупка, прибыль, ДДС, сотрудники, бюджет и личные финансы владельца. Можно посмотреть глазами собственника, администратора и финансиста. По желанию можно дать доступ и другим сотрудникам: обсуждается лично.</span></button>
       <button class="demo-card" data-m="self"><b>Для себя</b><span>Личные финансы: сколько пришло и куда ушло, траты по группам, дети, кредиты и рассрочки, лимиты, обязательные платежи. Расходы отправляете боту текстом, голосом или фото чека.</span></button>
       <button class="btn sec" id="demoPrice">Сколько стоит</button>`;
