@@ -147,11 +147,13 @@
   .pf u { position: absolute; top: -3px; width: 2px; height: 14px; background: var(--text); }
   /* Светлая тема: включается, когда в Telegram светлая тема. Блоки те же, меняются только цвета */
   html.light {
-    --bg: #ffffff; --bg2: #f4f3ef; --field: #ecebe5; --text: #1c2026; --hint: #6c737d;
-    --accent: #139a8c; --accent-text: #ffffff; --gold: #b07d00; --ok: #1f9d55; --warn: #c27a00; --bad: #e0464b;
-    --line: rgba(60, 60, 67, .13);
+    --bg: #ffffff; --bg2: #eceef1; --field: #e9ebef; --text: #0e1116; --hint: #545b66;
+    --accent: #0f8a7d; --accent-text: #ffffff; --gold: #9a6c00; --ok: #17864a; --warn: #a96800; --bad: #d23a40;
+    --line: rgba(30, 35, 45, .14);
   }
-  html.light .card { box-shadow: 0 1px 2px rgba(60, 50, 30, .06); border: 1px solid #ece9e2; }
+  html.light body { -webkit-font-smoothing: auto; }
+  html.light .card { box-shadow: 0 1px 3px rgba(20, 25, 35, .08); border: 1px solid #dde0e5; }
+  html.light input[type="checkbox"] { accent-color: var(--accent); }
   html.light .hero { border: 0; color: #fff; }
   html.light .hero .big { color: #fff; }
   html.light input, html.light select, html.light textarea { color-scheme: light; }
@@ -2106,7 +2108,7 @@ function applyTheme() {
   const q = new URLSearchParams(location.search).get('theme'), p = themePref();
   const light = q ? q === 'light' : p === 'tg' ? !!(tg && tg.colorScheme === 'light') : p === 'light';
   document.documentElement.classList.toggle('light', light);
-  const bg = light ? '#f4f3ef' : '#0f1216', bar = light ? '#ffffff' : '#1a1e25';
+  const bg = light ? '#eceef1' : '#0f1216', bar = light ? '#ffffff' : '#1a1e25';
   if (tg) {
     try { tg.setHeaderColor(bg); tg.setBackgroundColor(bg); } catch (e) {}
     try { if (tg.setBottomBarColor) tg.setBottomBarColor(bar); } catch (e) {}
