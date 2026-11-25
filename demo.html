@@ -1068,6 +1068,22 @@ let PONLY = false, PDATA = null, PM = '', PR = { f: '', t: '' }, PLIMALL = false
 const PORDER = ['Обязательные', 'Дети', 'Продукты', 'Импульсивные', 'Семья', 'Крупное', 'Не определено'];
 const PCOL = { 'Обязательные': '#2a78d6', 'Дети': '#1baf7a', 'Продукты': '#eda100', 'Импульсивные': '#e87ba4', 'Семья': '#6250d6', 'Крупное': '#eb6834', 'Не определено': '#898781' };
 const KCOL = ['#2a78d6', '#eb6834', '#1baf7a', '#6250d6', '#eda100'];
+// пункт плана -> куда перейти: вкладка «Личного» | блок
+function planTarget(n) {
+  if (/вопрос|ответить/i.test(n)) return 'main|ptodo';
+  if (/лимит/i.test(n)) return 'main|ptr';
+  if (/подушк|депозит «/i.test(n)) return 'goal|';
+  if (/садик/i.test(n)) return 'kids|';
+  if (/altyn|рассрочк|kaspi red/i.test(n)) return 'cred|';
+  return '';
+}
+let PSCROLL = '';
+function planGo(t) {
+  const [tab, blk] = t.split('|');
+  PTAB = tab; PSCROLL = blk || 'top';
+  if (blk) BLK.delete(blk);
+  if (TAB === 'personal' && !PONLY) drawPersonal(); else go('personal');
+}
 function renderPersonal() {
   PONLY = false;
   return load('personal', {}, { wait: () => loading('Загружаю личное…'), alive: () => TAB === 'personal', fail: failCard, draw: d => { PDATA = d; drawPersonal(); } });
@@ -1383,7 +1399,7 @@ function drawPersonal() {
       <div class="sbar">${bud.map((x, i) => `<i style="flex:${x.month};background:${['#2a78d6', '#e87ba4', '#eb6834', '#1baf7a', '#6250d6', '#eda100'][i % 6]}">${budTot && x.month / budTot > .09 ? Math.round(x.month / budTot * 100) + '%' : ''}</i>`).join('')}</div>
       ${bud.map((x, i) => `<div class="kv"><span><span class="dot" style="background:${['#2a78d6', '#e87ba4', '#eb6834', '#1baf7a', '#6250d6', '#eda100'][i % 6]}"></span>${esc(x.name)}</span><b>${tg0(x.month)}</b></div>${x.note ? `<div class="muted" style="margin:-4px 0 4px 16px;font-size:12px">${esc(x.note)}</div>` : ''}`).join('')}
       <div class="kv"><span>Доход в месяц (средний за 3 мес.)</span><b>${tg0(inc)}</b></div></div>` : ''}
-    ${plan.length ? `<h2>План действий</h2><div class="card">${planG.map(g => `<div class="muted" style="margin:8px 0 2px;font-weight:600">${esc(g)}</div>${plan.filter(x => (x.note || 'Сейчас') === g).map(x => `<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:14px"><input type="checkbox" data-pdone="${esc(x.name)}" ${PDONE[x.name] ? 'checked' : ''} style="width:18px;height:18px;flex:none;margin-top:1px"><span style="${PDONE[x.name] ? 'text-decoration:line-through;color:var(--hint)' : ''}">${esc(x.name)}</span></label>`).join('')}`).join('')}
+    ${plan.length ? `<h2>План действий</h2><div class="card"><div class="muted" style="font-size:12px;margin-bottom:4px">Нажмите на пункт со стрелкой, чтобы перейти к нему. Галочка: исполнено.</div>${planG.map(g => `<div class="muted" style="margin:8px 0 2px;font-weight:600">${esc(g)}</div>${plan.filter(x => (x.note || 'Сейчас') === g).map(x => `<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:14px"><input type="checkbox" data-pdone="${esc(x.name)}" ${PDONE[x.name] ? 'checked' : ''} title="Исполнено" style="width:18px;height:18px;flex:none;margin-top:1px"><span ${planTarget(x.name) ? `data-pgo="${planTarget(x.name)}" style="flex:1;cursor:pointer;${PDONE[x.name] ? 'text-decoration:line-through;color:var(--hint)' : ''}"` : `style="flex:1;${PDONE[x.name] ? 'text-decoration:line-through;color:var(--hint)' : ''}"`}>${esc(x.name)}${planTarget(x.name) ? ' <b style="color:var(--accent)">›</b>' : ''}</span></div>`).join('')}`).join('')}
       <div class="muted" style="margin-top:6px">Галочки сохраняются на этом телефоне.</div></div>` : ''}
     ${R_('Риск').length ? `<h2>Риски</h2><div class="card">${R_('Риск').map(x => `<div style="padding:6px 0;border-top:1px solid var(--line)"><b>⚠️ ${esc(x.name)}</b>${x.note ? `<div class="muted">${plain(x.note)}</div>` : ''}</div>`).join('')}</div>` : ''}
     ${R_('Уточнить').length ? `<h2>Нужно уточнить</h2><div class="card">${R_('Уточнить').map(x => `<div class="kv"><span>❔ ${esc(x.name)}</span></div>`).join('')}</div>` : ''}
@@ -1423,7 +1439,8 @@ function drawPersonal() {
   if (PONLY) {
     const att = tips.length ? `<h2>На что обратить внимание</h2><div class="card">${tips.map(t => `<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><span>${t.i}</span><span>${t.txt}</span></div>`).join('')}</div>` : '';
     $app.innerHTML = anHead() + att + anHtml;
-    $app.querySelectorAll('[data-pdone]').forEach(c => c.onchange = () => { PDONE[c.dataset.pdone] = c.checked; if (!c.checked) delete PDONE[c.dataset.pdone]; try { localStorage.setItem('aray_plan_done', JSON.stringify(PDONE)); } catch (e) {} const yy = window.scrollY; drawPersonal(); window.scrollTo(0, yy); });
+    $app.querySelectorAll('[data-pgo]').forEach(el => el.onclick = () => planGo(el.dataset.pgo));
+    $app.querySelectorAll('[data-pdone]').forEach(c => c.onchange = () => { PDONE[c.dataset.pdone] = c.checked; if (!c.checked) delete PDONE[c.dataset.pdone]; try { localStorage.setItem('aray_plan_done', JSON.stringify(PDONE)); } catch (e) {} const yy = window.scrollY; renderAn(); window.scrollTo(0, yy); });
     return;
   }
   $app.innerHTML = `
@@ -1460,8 +1477,10 @@ function drawPersonal() {
     <div class="muted" style="padding:0 6px">По выпискам карт; обновляет бухгалтер.</div>`;
   bindToggles(drawPersonal);
   $app.querySelectorAll('[data-ptab]').forEach(b => b.onclick = () => { PTAB = b.dataset.ptab; drawPersonal(); window.scrollTo(0, 0); });
+  if (PSCROLL) { const ps = PSCROLL; PSCROLL = ''; setTimeout(() => { const el = ps !== 'top' && $app.querySelector(`[data-blk="${ps}"]`); el ? el.scrollIntoView({ block: 'start' }) : window.scrollTo(0, 0); }, 120); }
   $app.querySelectorAll('[data-pext]').forEach(b => b.onclick = () => { PEXTRA = Number(b.dataset.pext); const yy = window.scrollY; drawPersonal(); window.scrollTo(0, yy); });
-  $app.querySelectorAll('[data-pdone]').forEach(c => c.onchange = () => { PDONE[c.dataset.pdone] = c.checked; if (!c.checked) delete PDONE[c.dataset.pdone]; try { localStorage.setItem('aray_plan_done', JSON.stringify(PDONE)); } catch (e) {} const yy = window.scrollY; drawPersonal(); window.scrollTo(0, yy); });
+  $app.querySelectorAll('[data-pgo]').forEach(el => el.onclick = () => planGo(el.dataset.pgo));
+    $app.querySelectorAll('[data-pdone]').forEach(c => c.onchange = () => { PDONE[c.dataset.pdone] = c.checked; if (!c.checked) delete PDONE[c.dataset.pdone]; try { localStorage.setItem('aray_plan_done', JSON.stringify(PDONE)); } catch (e) {} const yy = window.scrollY; drawPersonal(); window.scrollTo(0, yy); });
   bindTodo();
   $app.querySelectorAll('[data-plsave]').forEach(b => b.onclick = async () => {
     const g = b.dataset.plsave, inp = $app.querySelector(`[data-plim="${CSS.escape(g)}"]`), v = Math.round(Number(String(inp.value).replace(/\s/g, '')) || 0);
