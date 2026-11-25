@@ -6,7 +6,7 @@
 <title>Финансы с Арайлым</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-  /* Свой вид «Финансы с Арайлым»: один и тот же в светлой и тёмной теме Telegram */
+  /* Свой вид «Финансы с Арайлым»: темная тема по умолчанию, светлая ниже (html.light) */
   :root {
     --bg: #1a1e25;          /* карточки */
     --bg2: #0f1216;         /* фон страницы */
@@ -136,6 +136,27 @@
   .lg { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--hint); margin: 6px 0; }
   .lg span::before { content: ''; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; background: var(--c); vertical-align: -1px; }
   .hatch { background: repeating-linear-gradient(45deg, #e34948 0 3px, #f7c1c1 3px 6px) !important; }
+  .hm { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; font-size: 10px; color: var(--hint); text-align: center; }
+  .hm i { font-style: normal; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text); cursor: pointer; }
+  .hm i.fut { background: transparent; border: 1px dashed var(--line); color: var(--hint); cursor: default; }
+  .sbar { display: flex; gap: 2px; height: 24px; margin: 8px 0 6px; }
+  .sbar i { display: flex; align-items: center; justify-content: center; border-radius: 5px; font-size: 11px; font-style: normal; font-weight: 700; color: #10151a; min-width: 3px; }
+  .pf { position: relative; height: 8px; background: var(--bg2); border-radius: 4px; margin: 3px 0 8px; }
+  .pf i { position: absolute; left: 0; top: 0; height: 8px; border-radius: 4px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 7px; }
+  .pf u { position: absolute; top: -3px; width: 2px; height: 14px; background: var(--text); }
+  /* Светлая тема: включается, когда в Telegram светлая тема. Блоки те же, меняются только цвета */
+  html.light {
+    --bg: #ffffff; --bg2: #f4f3ef; --field: #ecebe5; --text: #1c2026; --hint: #6c737d;
+    --accent: #139a8c; --accent-text: #ffffff; --gold: #b07d00; --ok: #1f9d55; --warn: #c27a00; --bad: #e0464b;
+    --line: rgba(60, 60, 67, .13);
+  }
+  html.light .card { box-shadow: 0 1px 2px rgba(60, 50, 30, .06); border: 1px solid #ece9e2; }
+  html.light .hero { border: 0; color: #fff; }
+  html.light .hero .big { color: #fff; }
+  html.light input, html.light select, html.light textarea { color-scheme: light; }
+  html.light nav { background: #ffffff; }
+  html.light .sb .c.on { outline-color: var(--text); }
 </style>
 </head>
 <body>
@@ -488,6 +509,21 @@ function drawReports() {
       <span class="muted" style="align-self:center;font-size:12px">▸ нажмите строку, чтобы раскрыть</span>
     </div>
 
+    ${hasFact && F.rev > 0 ? block('where', 'Куда ушла выручка', 'прибыль ' + Math.round(F.net / F.rev * 100) + '%', (() => {
+      const parts = [['Переменные', F.vr, '#ff7a6b'], ['Постоянные', F.fx, '#f0b429'], ['Налог и износ', F.bt, '#9aa0a8'], [F.net >= 0 ? 'Прибыль' : 'Убыток', Math.abs(F.net), F.net >= 0 ? 'var(--accent)' : 'var(--bad)']].filter(p => p[1] > 0);
+      return `<div class="card"><div class="sbar">${parts.map(p => `<i style="flex:${p[1]};background:${p[2]}">${p[1] / F.rev > .09 ? Math.round(p[1] / F.rev * 100) + '%' : ''}</i>`).join('')}</div>
+        ${parts.map(p => `<div class="kv"><span><span class="dot" style="background:${p[2]}"></span>${p[0]}</span><b>${tg0(p[1])}</b></div>`).join('')}</div>`;
+    })()) : ''}
+
+    ${hasFact ? (() => {
+      const ex = pl.filter(l => l.grp !== 'Выручка' && l.grp !== 'Амортизация и налог').map(l => ({ n: l.name, f: val(l, 'f'), p: val(l, 'p') })).filter(x => x.p > 0 && x.f > 0).sort((x, y) => y.f - x.f).slice(0, 6);
+      if (!ex.length) return '';
+      return block('pf', 'План-факт расходов', 'черта = план', `<div class="card">${ex.map(x => {
+        const m = Math.max(x.f, x.p) * 1.12, k = Math.round((x.f / x.p - 1) * 100), over = x.f > x.p * 1.05;
+        return `<div class="row" style="font-size:14px"><span>${esc(x.n)}</span><b class="${over ? 'over' : 'under'}">${k > 0 ? '+' : ''}${k}%</b></div><div class="pf"><i style="width:${x.f / m * 100}%;background:${over ? '#ff7a6b' : 'var(--accent)'}"></i><u style="left:${x.p / m * 100}%"></u></div>`;
+      }).join('')}<div class="muted">Полоса = факт, черта = план. Красная: больше плана на 5% и выше.</div></div>`);
+    })() : ''}
+
     ${hasFact ? block('alerts', 'Что вышло за план', alerts.length ? alerts.length + ' ' + plural(alerts.length, 'статья', 'статьи', 'статей') : 'всё в плане',
       `<div class="card">${alerts.length ? alerts.slice(0, 8).map(a => `<div class="alert"><span>${esc(a.t)}</span><b class="over">${a.d > 0 ? '+' : ''}${tg0(a.d)}</b></div>`).join('') : '<div class="muted">Всё в пределах плана</div>'}</div>`) : ''}
 
@@ -743,6 +779,19 @@ function dayRange(k) {
   const a = new Date(d0.getFullYear(), d0.getMonth() - (k === 'month1' ? 1 : 0), 1);
   return [a, new Date(a.getFullYear(), a.getMonth() + 1, 0)];
 }
+// Календарь выручки: чем ярче день, тем больше выручка
+function heatCal(days, a, b) {
+  const by = {}; days.forEach(d => { by[d.date] = d.sum; });
+  const mx = Math.max(1, ...days.map(d => d.sum)), today = ymd(new Date());
+  let h = '<div class="hm">' + ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'].map(w => `<div>${w}</div>`).join('') + '<div></div>'.repeat((a.getDay() + 6) % 7);
+  for (let d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) {
+    const k = ymd(d), v = by[k] || 0, f = v / mx;
+    h += k > today ? `<i class="fut">${d.getDate()}</i>`
+      : `<i data-day="${k}" title="${tg0(v)}" style="background:color-mix(in srgb, var(--accent) ${Math.round(10 + f * 90)}%, var(--bg2));${f > .55 ? 'color:#fff;' : ''}">${d.getDate()}</i>`;
+  }
+  return h + '</div><div class="row muted" style="font-size:11px;margin-top:6px"><span>меньше</span><span>нажмите день, чтобы открыть</span><span>больше</span></div>';
+}
+
 async function renderDays() {
   const [a, b] = dayRange(DAYPER), from = ymd(a), to = ymd(b);
   const head = `<h1>Отчёты · ${esc(ME.client.name)}</h1>${viewChips()}
@@ -791,6 +840,7 @@ async function renderDays() {
       <div class="card"><div class="muted">Выручка (услуги)</div><div class="big gold" style="font-size:22px">${tg0(tot.sum)}</div><div class="muted">${dm(a)}-${dm(b)}</div></div>
       <div class="card"><div class="muted">Визиты</div><div class="big" style="font-size:22px">${tot.visits}</div><div class="muted">не пришли: ${tot.noshow}${tot.planned ? ' · ожидается ' + tg0(tot.planned) : ''}</div></div>
     </div>
+    ${D.days.length > 1 ? `<h2>Выручка по дням</h2><div class="card">${heatCal(D.days, a, b)}</div>` : ''}
     <h2>Мастера и ЗП за период</h2>
     <div class="card" style="padding:10px"><table class="rep"><tbody>
       <tr class="h"><td></td><td class="n">Услуги</td><td class="n">Положено</td></tr>
@@ -1822,13 +1872,25 @@ async function switchClient(code) {
   await boot();
 }
 
+// ====== Тема: темная или светлая, как в Telegram ======
+function applyTheme() {
+  const q = new URLSearchParams(location.search).get('theme');
+  const light = q ? q === 'light' : !!(tg && tg.colorScheme === 'light');
+  document.documentElement.classList.toggle('light', light);
+  const bg = light ? '#f4f3ef' : '#0f1216', bar = light ? '#ffffff' : '#1a1e25';
+  if (tg) {
+    try { tg.setHeaderColor(bg); tg.setBackgroundColor(bg); } catch (e) {}
+    try { if (tg.setBottomBarColor) tg.setBottomBarColor(bar); } catch (e) {}
+  }
+}
+
 // ====== Запуск ======
 async function start() {
   if (tg) {
     tg.ready(); tg.expand();
     tg.BackButton.onClick(() => go(TAB === 'upload' || TAB === 'manual' ? 'docs' : TAB));
-    try { tg.setHeaderColor('#0f1216'); tg.setBackgroundColor('#0f1216'); } catch (e) {}
-    try { if (tg.setBottomBarColor) tg.setBottomBarColor('#1a1e25'); } catch (e) {}
+    applyTheme();
+    try { tg.onEvent('themeChanged', applyTheme); } catch (e) {}
     // На телефоне: на весь экран, как в видео (Telegram 8.0 и новее). Свайп вниз не закрывает приложение.
     const mobile = ['ios', 'android', 'android_x'].includes(tg.platform);
     try { if (mobile && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && tg.requestFullscreen) tg.requestFullscreen(); } catch (e) {}
