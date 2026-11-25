@@ -882,7 +882,7 @@ function drawYears() {
 }
 
 // ====== Личное: личные финансы собственницы по всем картам (видят только она и администратор) ======
-let PDATA = null, PM = '', PR = { f: '', t: '' }, PLIMALL = false;   // PM 'range' = свой период PR            // PM = месяц ГГГГ-ММ или 'year'
+let PDATA = null, PM = '', PR = { f: '', t: '' }, PLIMALL = false, PTAB = 'main', PEXTRA = null;   // PTAB: вкладка «Личного», PEXTRA: доплата в калькуляторе кредита   // PM 'range' = свой период PR            // PM = месяц ГГГГ-ММ или 'year'
 const PORDER = ['Обязательные', 'Дети', 'Продукты', 'Импульсивные', 'Семья', 'Крупное', 'Не определено'];
 const PCOL = { 'Обязательные': '#2a78d6', 'Дети': '#1baf7a', 'Продукты': '#eda100', 'Импульсивные': '#e87ba4', 'Семья': '#6250d6', 'Крупное': '#eb6834', 'Не определено': '#898781' };
 const KCOL = ['#2a78d6', '#eb6834', '#1baf7a', '#6250d6', '#eda100'];
@@ -1137,8 +1137,109 @@ function drawPersonal() {
   }
   if (mustTot) tips.push({ i: '🛟', txt: `Подушка на 3-6 месяцев: <b>${tg0(mustTot * 3)}</b>-${tg0(mustTot * 6)}.` });
   if (spentAvg > 0 && undefAvg / spentAvg > 0.05) tips.push({ i: '❓', txt: `<b>${tg0(undefAvg)}</b> в месяц непонятно куда. Ответьте на вопросы бухгалтера.` });
+  // ===== Вкладки «Личного»: Аналитика, Кредиты, Цели, Регулярные, Дети =====
+  const R_ = k => (D.ref || []).filter(x => x.kind === k);
+  const plain = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  // подушка: цель и что накоплено с месяца начала (раздел «Накопления»)
+  const cush = R_('Подушка')[0];
+  const cushHave = cush ? Math.max(0, -D.rows.filter(r => r.sec === 'Накопления' && (!cush.from || r.m >= cush.from)).reduce((a, r) => a + r.sum, 0)) + (cush.count || 0) : 0;
+  const cushMonths = mustTot ? cushHave / mustTot : 0;
+  // 4 показателя и оценка «финансовое здоровье» (по 25 баллов)
+  const lin = (v, good, bad) => Math.max(0, Math.min(1, (v - bad) / (good - bad)));
+  const load_ = inc > 0 ? credMonth / inc : 0, und_ = spentAvg > 0 ? undefAvg / spentAvg : 0, sav_ = inc > 0 ? savedAvg / inc : 0;
+  const mets = [
+    { n: 'Подушка', v: cushMonths.toFixed(1).replace('.', ',') + ' мес.', norm: 'норма 3-6 мес.', k: lin(cushMonths, 3, 0) },
+    { n: 'Долговая нагрузка', v: Math.round(load_ * 100) + '%', norm: 'норма до 30%', k: lin(load_, 0.3, 0.6) },
+    { n: 'Непонятно куда', v: Math.round(und_ * 100) + '%', norm: 'норма до 5%', k: lin(und_, 0.05, 0.3) },
+    { n: 'Откладываете', v: Math.max(0, Math.round(sav_ * 100)) + '%', norm: 'цель 10%', k: lin(sav_, 0.1, 0) },
+  ];
+  const score = Math.round(mets.reduce((a, m) => a + m.k * 25, 0));
+  const scoreT = score >= 75 ? 'хорошо' : score >= 50 ? 'средне' : score >= 25 ? 'слабо' : 'критично';
+  const kc = k => k >= 0.99 ? 'var(--ok)' : k >= 0.5 ? 'var(--warn)' : 'var(--bad)';
+  // кредит с процентами: калькулятор досрочного погашения
+  const interestC = x => !/^Kaspi|рассрочк|садик/i.test(x.name) && !/0%/.test(x.note || '');
+  const main = credits.filter(x => interestC(x) && x.left && x.count).map(x => ({ x, c: credLeft(x) })).filter(o => o.c.sum > 0)
+    .map(o => Object.assign(o, { n: o.x.count - o.c.paid, r: rateOf(o.c.sum, o.x.month, o.x.count - o.c.paid) })).sort((a, b) => b.r - a.r)[0];
+  const startM = main ? (main.x.from > monthNow() ? main.x.from : monthNow()) : '';
+  const scen = e => { const po = payoff(main.c.sum, main.x.month + e, main.r); return { e, k: po.k, end: addM(startM, po.k - 1), over: Math.max(0, po.sum - main.c.sum) }; };
+  const planX = (R_('Бюджет').find(x => /досрочно/i.test(x.name)) || {}).month || 0;
+  const extras = [...new Set([0, planX, 50000, 100000, 150000, 200000, 250000])].filter(e => !main || e <= main.c.sum / 2).sort((x, y) => x - y);
+  if (main && (PEXTRA === null || !extras.includes(PEXTRA))) PEXTRA = planX || 0;
+  const S0 = main ? scen(0) : null, SX = main ? scen(PEXTRA || 0) : null;
+  const ML = m => MONTHS[Number(m.slice(5)) - 1].toLowerCase() + ' ' + m.slice(0, 4);
+  // регулярные: статьи, которые есть в каждом из трех последних полных месяцев
+  const regItems = {};
+  if (full3.length) D.rows.filter(r => full3.includes(r.m) && r.sec === 'Траты' && !/Не определено|Крупное/.test(r.grp) && r.sum < 0).forEach(r => {
+    const k = r.grp + '|' + r.item; (regItems[k] = regItems[k] || { g: r.grp, n: r.item, ms: new Set(), s: 0 }); regItems[k].ms.add(r.m); regItems[k].s -= r.sum; });
+  const regs = Object.values(regItems).filter(x => x.ms.size === full3.length && !/кредит|рассрочк|ипотек/i.test(x.n)).map(x => Object.assign(x, { avg: x.s / full3.length })).filter(x => x.avg >= 1000).sort((a, b) => b.avg - a.avg);
+  const regTot = regs.reduce((a, x) => a + x.avg, 0) + credMonth;
+  // план действий: отметки «сделано» хранятся на этом телефоне
+  let PDONE = {}; try { PDONE = JSON.parse(localStorage.getItem('aray_plan_done') || '{}'); } catch (e) {}
+  const plan = R_('План'), planG = [...new Set(plan.map(x => x.note || 'Сейчас'))];
+  const bud = R_('Бюджет'), budTot = bud.reduce((a, x) => a + x.month, 0);
+  const tabs = [['main', 'Обзор'], ['an', 'Аналитика ✦'], ['cred', 'Кредиты'], ['goal', 'Цели'], ['reg', 'Регулярные'], ['kids', 'Дети']].filter(t => t[0] !== 'kids' || kidsHtml);
+  if (!tabs.some(t => t[0] === PTAB)) PTAB = 'main';
+  const tabsHtml = `<div class="chips">${tabs.map(([k, t]) => `<button class="chip ${PTAB === k ? 'on' : ''}" data-ptab="${k}">${t}</button>`).join('')}</div>`;
+
+  const anHtml = `
+    <div class="card" style="text-align:center">
+      <div class="muted">Финансовое здоровье</div>
+      <div style="position:relative;width:200px;height:110px;margin:6px auto 0">
+        <svg viewBox="0 0 200 110" width="200" height="110"><path d="M15 100 A85 85 0 0 1 185 100" fill="none" stroke="var(--bg2)" stroke-width="16" stroke-linecap="round"/>
+        <path d="M15 100 A85 85 0 0 1 185 100" fill="none" stroke="${kc(score / 100 + (score >= 75 ? 0.5 : 0))}" stroke-width="16" stroke-linecap="round" pathLength="100" stroke-dasharray="${score} 100"/></svg>
+        <div style="position:absolute;left:0;right:0;top:44px"><div class="big" style="font-size:34px">${score}</div><div class="muted">из 100 · ${scoreT}</div></div>
+      </div>
+      <div class="muted" style="font-size:12px">По ${full3.map(mLabel).join(', ')}. Пересчитывается каждый месяц.</div>
+    </div>
+    <div class="grid2">${mets.map(m => `<div class="card"><div class="muted">${m.n}</div><div class="big" style="font-size:20px;color:${kc(m.k)}">${m.v}</div><div class="muted">${m.norm}</div></div>`).join('')}</div>
+    ${R_('Вывод').length ? `<h2>Главное</h2><div class="card">${R_('Вывод').map(x => `<div style="padding:6px 0;border-top:1px solid var(--line)"><b>${esc(x.name)}</b>${x.note ? `<div class="muted">${plain(x.note)}</div>` : ''}</div>`).join('')}</div>` : ''}
+    ${main ? `<h2>Кредит</h2><div class="card"><div class="muted">Свободна от «${esc(main.x.name)}»</div><div class="big" style="font-size:24px">${ML(SX.end)}</div>
+      <div class="muted">${PEXTRA ? `если доплачивать ${tg0(PEXTRA)} в месяц (по графику ${ML(S0.end)}). Экономия на процентах <b class="under">${tg0(S0.over - SX.over)}</b>` : 'по графику банка'}. Калькулятор во вкладке «Кредиты».</div></div>` : ''}
+    ${bud.length ? `<h2>Куда направлять доход</h2><div class="card">
+      <div class="sbar">${bud.map((x, i) => `<i style="flex:${x.month};background:${['#2a78d6', '#e87ba4', '#eb6834', '#1baf7a', '#6250d6', '#eda100'][i % 6]}">${budTot && x.month / budTot > .09 ? Math.round(x.month / budTot * 100) + '%' : ''}</i>`).join('')}</div>
+      ${bud.map((x, i) => `<div class="kv"><span><span class="dot" style="background:${['#2a78d6', '#e87ba4', '#eb6834', '#1baf7a', '#6250d6', '#eda100'][i % 6]}"></span>${esc(x.name)}</span><b>${tg0(x.month)}</b></div>${x.note ? `<div class="muted" style="margin:-4px 0 4px 16px;font-size:12px">${esc(x.note)}</div>` : ''}`).join('')}
+      <div class="kv"><span>Доход в месяц (средний за 3 мес.)</span><b>${tg0(inc)}</b></div></div>` : ''}
+    ${plan.length ? `<h2>План действий</h2><div class="card">${planG.map(g => `<div class="muted" style="margin:8px 0 2px;font-weight:600">${esc(g)}</div>${plan.filter(x => (x.note || 'Сейчас') === g).map(x => `<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:14px"><input type="checkbox" data-pdone="${esc(x.name)}" ${PDONE[x.name] ? 'checked' : ''} style="width:18px;height:18px;flex:none;margin-top:1px"><span style="${PDONE[x.name] ? 'text-decoration:line-through;color:var(--hint)' : ''}">${esc(x.name)}</span></label>`).join('')}`).join('')}
+      <div class="muted" style="margin-top:6px">Галочки сохраняются на этом телефоне.</div></div>` : ''}
+    ${R_('Риск').length ? `<h2>Риски</h2><div class="card">${R_('Риск').map(x => `<div style="padding:6px 0;border-top:1px solid var(--line)"><b>⚠️ ${esc(x.name)}</b>${x.note ? `<div class="muted">${plain(x.note)}</div>` : ''}</div>`).join('')}</div>` : ''}
+    ${R_('Уточнить').length ? `<h2>Нужно уточнить</h2><div class="card">${R_('Уточнить').map(x => `<div class="kv"><span>❔ ${esc(x.name)}</span></div>`).join('')}</div>` : ''}
+    ${!R_('Вывод').length && !plan.length ? '<div class="card muted">Выводы и план появятся после первого разбора бухгалтером.</div>' : ''}`;
+
+  const credTab = `
+    ${main ? `<div class="card"><div class="muted">Калькулятор досрочного погашения: ${esc(main.x.name)}</div>
+      <div class="muted" style="margin-top:2px">долг ${tg0(main.c.sum)} · платеж ${tg0(main.x.month)} · ставка около ${(main.r * 1200).toFixed(1).replace('.', ',')}% годовых</div>
+      <div class="chips" style="margin-top:8px">${extras.map(e => `<button class="chip ${PEXTRA === e ? 'on' : ''}" data-pext="${e}">${e ? '+' + (e / 1000) + ' тыс.' : 'по графику'}</button>`).join('')}</div>
+      <div class="grid2" style="margin-top:4px"><div><div class="muted">Закроете</div><div class="big" style="font-size:20px">${ML(SX.end)}</div><div class="muted">${SX.k} ${plural(SX.k, 'платеж', 'платежа', 'платежей')}</div></div>
+        <div><div class="muted">Проценты банку</div><div class="big" style="font-size:20px">${tg0(SX.over)}</div>${PEXTRA ? `<div class="under" style="font-size:13px">экономия ${tg0(S0.over - SX.over)}</div>` : ''}</div></div>
+      <table class="rep" style="margin-top:8px"><tbody><tr class="h"><td>Доплата</td><td class="n">Закрытие</td><td class="n">Проценты</td><td class="n">Экономия</td></tr>
+      ${extras.map(e => { const z = scen(e); return `<tr${e === PEXTRA ? ' style="font-weight:700"' : ''}><td>${e ? tg0(e) : 'нет'}</td><td class="n">${mLabel(z.end)}</td><td class="n">${nb(z.over)}</td><td class="n under">${e ? nb(S0.over - z.over) : ''}</td></tr>`; }).join('')}</tbody></table>
+      <div class="muted" style="margin-top:6px">Перед доплатой уточните в банке: досрочное погашение в счет срока, без комиссии.</div></div>` : ''}
+    <h2>Порядок погашения</h2><div class="card">
+      ${credits.slice().sort((a, b) => (main && b === main.x) - (main && a === main.x)).map((x, i) => `<div class="kv"><span>${main && x === main.x ? '<b>1. Досрочно</b>' : 'По графику'} · ${esc(x.name.replace(/^Kaspi:\s*/, 'Kaspi: '))}</span><b>${tg0(x.month)}</b></div>`).join('')}
+      <div class="muted" style="margin-top:6px">Свободные деньги только на кредит с процентами. Рассрочки 0% досрочно не гасить: это бесплатные деньги банка.</div></div>
+    <h2>Все платежи</h2>${credHtml}`;
+
+  const goalTab = `
+    <div class="card"><div class="row"><b>🛟 Подушка безопасности</b><b>${tg0(cushHave)}</b></div>
+      ${cush ? `<div class="bar"><i style="width:${Math.min(100, cush.left ? cushHave / cush.left * 100 : 0)}%"></i></div>
+      <div class="muted">цель ${tg0(cush.left)}${cush.month ? ` · откладывать ${tg0(cush.month)} в месяц` : ''}${cush.left && cush.month ? ` · ${Math.max(0, Math.ceil((cush.left - cushHave) / cush.month))} мес. до цели` : ''}</div>
+      ${cush.note ? `<div class="muted" style="margin-top:4px">${plain(cush.note)}</div>` : ''}` : `<div class="muted">Нужно: 3 месяца обязательных трат, ${tg0(mustTot * 3)}. Отдельный депозит, не карта.</div>`}</div>
+    ${R_('Цель').map(x => { const have = x.count || 0, left = Math.max(0, x.left - have), n = x.month ? Math.ceil(left / x.month) : 0;
+      return `<div class="card"><div class="row"><b>🎯 ${esc(x.name)}</b><b>${tg0(x.left)}</b></div><div class="bar"><i style="width:${x.left ? Math.min(100, have / x.left * 100) : 0}%"></i></div>
+      <div class="muted">накоплено ${tg0(have)}${x.month ? ` · ${tg0(x.month)} в месяц · ${n} мес.` : ''}${x.from ? ` · срок ${mLabel(x.from)}` : ''}</div>${x.note ? `<div class="muted">${plain(x.note)}</div>` : ''}</div>`; }).join('') || '<div class="card muted">Своих целей пока нет: напишите бухгалтеру, на что копите (квартира, отпуск, учеба детей), и цель появится здесь с суммой в месяц.</div>'}
+    ${R_('Шаг').length ? `<h2>После кредитов</h2><div class="card">${R_('Шаг').map((x, i) => `<div style="padding:5px 0"><b>${i + 1}.</b> ${esc(x.name)}${x.note ? `<div class="muted">${plain(x.note)}</div>` : ''}</div>`).join('')}</div>` : ''}`;
+
+  const regTab = `
+    <div class="card"><div class="muted">Уходит каждый месяц регулярно</div><div class="big" style="font-size:24px">${tg0(regTot)}</div>
+      <div class="muted">${inc > 0 ? Math.round(regTot / inc * 100) + '% дохода · ' : ''}по ${full3.map(mLabel).join(', ')}</div></div>
+    <h2>Кредиты и рассрочки</h2><div class="card">${credits.map(x => `<div class="kv"><span>${esc(x.name)}</span><b>${tg0(x.month)}</b></div>`).join('')}</div>
+    <h2>Повторяются каждый месяц</h2><div class="card">${regs.map(x => `<div class="kv"><span><span class="dot" style="background:${PCOL[x.g] || '#898781'}"></span>${esc(x.n)}</span><b>${tg0(x.avg)}</b></div>`).join('') || '<div class="muted">Нет</div>'}
+      <div class="muted" style="margin-top:6px">Средняя сумма за месяц. Это статьи, которые были в каждом из трех месяцев: проверьте, все ли нужны (подписки, связь, такси).</div></div>`;
+
   $app.innerHTML = `
     <h1>Личное</h1>
+    ${tabsHtml}
+    ${PTAB === 'an' ? anHtml : PTAB === 'cred' ? credTab : PTAB === 'goal' ? goalTab : PTAB === 'reg' ? regTab : `
     <div class="row" style="margin:0 2px 8px"><div class="monthsw"><button data-pmv="-1" ${many || pos <= 0 ? 'disabled' : ''}>‹</button><b>${esc(title)}</b><button data-pmv="1" ${many || pos >= ms.length - 1 ? 'disabled' : ''}>›</button></div>
       <div style="display:flex;gap:6px"><button class="chip ${PM === 'year' ? 'on' : ''}" data-pyear>За год</button><button class="chip ${PM === 'range' ? 'on' : ''}" data-prange>Период</button></div></div>
     ${PM === 'range' ? `<div class="period" style="margin-bottom:8px"><label class="f" style="margin:0"><span>С месяца</span><select id="prf">${ms.map(m => `<option value="${m}" ${m === PR.f ? 'selected' : ''}>${mLabel(m)}</option>`).join('')}</select></label>
@@ -1155,18 +1256,22 @@ function drawPersonal() {
       <button class="chip ${RMODE === 'short' ? 'on' : ''}" data-mode="short">Кратко</button>
       <button class="chip ${RMODE === 'full' ? 'on' : ''}" data-mode="full">Подробно</button>
     </div>
-    ${(D.todo || []).length ? block('ptodo', 'Вопросы и платежи', (D.todo.filter(t => !isDone(t)).length ? D.todo.filter(t => !isDone(t)).length + ' без ответа' : 'всё разобрано'), todoHtml(D)) : ''}
-    ${block('ptr', 'Траты по группам', tg0(spent), `<div class="card">${grpHtml || '<div class="muted">Трат нет</div>'}
+    ${PTAB !== 'main' ? '' : (D.todo || []).length ? block('ptodo', 'Вопросы и платежи', (D.todo.filter(t => !isDone(t)).length ? D.todo.filter(t => !isDone(t)).length + ' без ответа' : 'всё разобрано'), todoHtml(D)) : ''}
+    ${PTAB !== 'main' ? '' : block('ptr', 'Траты по группам', tg0(spent), `<div class="card">${grpHtml || '<div class="muted">Трат нет</div>'}
       <button class="btn sec" data-plimall style="margin-top:8px">${PLIMALL ? 'Скрыть лимиты' : '🎯 Лимиты в месяц'}</button>
       ${PLIMALL ? `<div style="margin-top:8px">${PORDER.map(g => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><span style="flex:1">${esc(g)}</span><input data-pliml="${esc(g)}" inputmode="numeric" placeholder="без лимита" value="${lim[g] || ''}" style="width:45%;padding:6px"></div>`).join('')}
         <button class="btn" data-plimsave>Сохранить лимиты</button><div class="muted" style="margin-top:4px">Лимит на месяц. Если траты больше, группа станет красной, а в «Сводке» появится предупреждение.</div></div>` : ''}</div>`)}
-    ${tips.length ? block('ptips', 'Советы', tips.length + ' ' + plural(tips.length, 'совет', 'совета', 'советов'), `<div class="card">${tips.map(t => `<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line, rgba(128,128,128,.15))"><span>${t.i}</span><span>${t.txt}</span></div>`).join('')}<div class="muted" style="margin-top:6px">По трем последним полным месяцам: ${full3.map(mLabel).join(', ')}.</div></div>`) : ''}
-    ${block('pmon', 'По месяцам', '', `<div class="card"><div class="lg">${PORDER.map(g => `<span style="--c:${PCOL[g]}">${esc(g)}</span>`).join('')}</div>${stackBars(bars, ms.map(m => MSHORT[Number(m.slice(5)) - 1]), { on: PM })}<div class="muted" style="margin-top:6px">Нажмите на столбик, чтобы открыть месяц.</div></div>`)}
-    ${kidsHtml ? block('pkids', 'Дети', tg0(kidsTot), kidsHtml) : ''}
-    ${credits.length ? block('pcred', 'Обязательные платежи', tg0(mustTot) + '/мес', credHtml) : ''}
-    ${block('pnot', 'Не личные траты', tg0(other), `<div class="card">${Object.entries(nt).filter(([, v]) => Math.abs(v) >= 1).map(([g, v]) => `<div class="kv"><span>${esc(g)}</span><b>${tg0(v)}</b></div>`).join('') || '<div class="muted">Нет</div>'}<div class="muted" style="margin-top:6px">Расходы центра с личной карты, наличные на ЗП, аренду и кредит Медета, долги и обмен (перевела, вернули): в личные траты не входят.</div></div>`)}
-    <div class="muted" style="padding:0 6px">Kaspi Gold, Freedom, Halyk; обновлено бухгалтером по выпискам.</div>`;
+    ${PTAB === 'main' && tips.length ? block('ptips', 'Советы', tips.length + ' ' + plural(tips.length, 'совет', 'совета', 'советов'), `<div class="card">${tips.map(t => `<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line, rgba(128,128,128,.15))"><span>${t.i}</span><span>${t.txt}</span></div>`).join('')}<div class="muted" style="margin-top:6px">По трем последним полным месяцам: ${full3.map(mLabel).join(', ')}.</div></div>`) : ''}
+    ${PTAB !== 'main' ? '' : block('pmon', 'По месяцам', '', `<div class="card"><div class="lg">${PORDER.map(g => `<span style="--c:${PCOL[g]}">${esc(g)}</span>`).join('')}</div>${stackBars(bars, ms.map(m => MSHORT[Number(m.slice(5)) - 1]), { on: PM })}<div class="muted" style="margin-top:6px">Нажмите на столбик, чтобы открыть месяц.</div></div>`)}
+    ${PTAB === 'kids' ? `<h2>Дети · ${tg0(kidsTot)}</h2>` + kidsHtml : ''}
+    ${PTAB === 'main' && credits.length ? block('pcred', 'Обязательные платежи', tg0(mustTot) + '/мес', credHtml) : ''}
+    ${PTAB !== 'main' ? '' : block('pnot', 'Не личные траты', tg0(other), `<div class="card">${Object.entries(nt).filter(([, v]) => Math.abs(v) >= 1).map(([g, v]) => `<div class="kv"><span>${esc(g)}</span><b>${tg0(v)}</b></div>`).join('') || '<div class="muted">Нет</div>'}<div class="muted" style="margin-top:6px">Расходы центра с личной карты, наличные на ЗП, аренду и кредит Медета, долги и обмен (перевела, вернули): в личные траты не входят.</div></div>`)}
+    `}
+    <div class="muted" style="padding:0 6px">По выпискам карт; обновляет бухгалтер.</div>`;
   bindToggles(drawPersonal);
+  $app.querySelectorAll('[data-ptab]').forEach(b => b.onclick = () => { PTAB = b.dataset.ptab; drawPersonal(); window.scrollTo(0, 0); });
+  $app.querySelectorAll('[data-pext]').forEach(b => b.onclick = () => { PEXTRA = Number(b.dataset.pext); const yy = window.scrollY; drawPersonal(); window.scrollTo(0, yy); });
+  $app.querySelectorAll('[data-pdone]').forEach(c => c.onchange = () => { PDONE[c.dataset.pdone] = c.checked; if (!c.checked) delete PDONE[c.dataset.pdone]; try { localStorage.setItem('aray_plan_done', JSON.stringify(PDONE)); } catch (e) {} const yy = window.scrollY; drawPersonal(); window.scrollTo(0, yy); });
   bindTodo();
   $app.querySelectorAll('[data-plsave]').forEach(b => b.onclick = async () => {
     const g = b.dataset.plsave, inp = $app.querySelector(`[data-plim="${CSS.escape(g)}"]`), v = Math.round(Number(String(inp.value).replace(/\s/g, '')) || 0);
