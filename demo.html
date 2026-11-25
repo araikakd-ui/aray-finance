@@ -1237,26 +1237,26 @@ function drawPersonal() {
     const interest = x => !/^Kaspi|рассрочк|садик/i.test(x.name);
     const cand = over > 1000 ? credits.filter(x => x.count && interest(x)).map(x => ({ x, c: credLeft(x) }))
       .filter(o => o.c.sum > 0 && (o.x.count - o.c.paid) - payoff(o.c.sum, o.x.month + over, rateOf(o.c.sum, o.x.month, o.x.count - o.c.paid)).k >= 2).sort((a, b) => a.c.sum - b.c.sum)[0] : null;
-    let txt = `Импульсивные покупки в среднем <b>${tg0(impAvg)}</b> в месяц${limI ? (over > 0 ? `, это на <b>${tg0(over)}</b> больше лимита` : ', в пределах лимита') : ''}.`;
-    if (top) txt += ` Больше всего уходит на «${esc(top[0])}»: ${tg0(top[1] / full3.length)} в месяц.`;
+    let txt = `Импульсивные: <b>${tg0(impAvg)}</b> в месяц${limI && over > 0 ? `, лимит превышен на <b>${tg0(over)}</b>` : ''}${top ? ` (больше всего ${esc(top[0].toLowerCase())})` : ''}.`;
+
     if (cand) {
       // платёж по графику плюс сэкономленное на импульсивных
       const was = cand.x.count - cand.c.paid, r = rateOf(cand.c.sum, cand.x.month, was), po = payoff(cand.c.sum, cand.x.month + over, r), n = po.k;
       const saved = cand.x.left ? Math.max(0, cand.x.month * was - po.sum) : 0;
-      txt += ` Если ${limI ? 'держаться лимита' : 'сократить их на 30%'}, освободится ${tg0(over)} в месяц. Добавляйте их к платежу по кредиту с процентами, и «${esc(cand.x.name)}» (долг ${tg0(cand.c.sum)}) закроется за ${n} ${plural(n, 'месяц', 'месяца', 'месяцев')} вместо ${was}${saved > 1000 ? `, а процентов банку заплатите на <b>${tg0(saved)}</b> меньше` : ''}. Рассрочки 0% досрочно гасить не нужно, они без процентов.`;
-    } else if (over > 1000) txt += ` Если ${limI ? 'держаться лимита' : 'сократить их на 30%'}, за год останется ${tg0(over * 12)}.`;
+      txt += ` Направьте эти ${tg0(over)} в месяц на «${esc(cand.x.name)}»: закроете на ${was - n} ${plural(was - n, 'месяц', 'месяца', 'месяцев')} раньше${saved > 1000 ? ` и сэкономите <b>${tg0(saved)}</b> на процентах` : ''}.`;
+    } else if (over > 1000) txt += ` По лимиту за год останется ${tg0(over * 12)}.`;
     tips.push({ i: '🛍️', txt });
   }
   if (inc > 0 && credMonth) {
     const p = credMonth / inc;
-    tips.push({ i: '💳', txt: `Кредиты и рассрочки <b>${tg0(credMonth)}</b> в месяц, это <b>${Math.round(p * 100)}%</b> дохода. ${p > 0.4 ? 'Много: больше 40%. Новые рассрочки лучше не брать, лишние деньги направлять на кредит с процентами, рассрочки 0% платить по графику.' : p > 0.3 ? 'Близко к пределу: лучше держать до 30%.' : 'В норме: до 30% дохода.'}` });
+    tips.push({ i: '💳', txt: `Кредиты: <b>${tg0(credMonth)}</b> в месяц, ${Math.round(p * 100)}% дохода. ${p > 0.4 ? 'Много, норма до 30%: новые рассрочки не брать.' : p > 0.3 ? 'Близко к пределу, норма до 30%.' : 'В норме, до 30%.'} Рассрочки 0% досрочно не гасить.` });
   }
   if (inc > 0) {
     const r = savedAvg / inc;
-    tips.push({ i: '🐷', txt: r >= 0.1 ? `Откладываете <b>${Math.round(r * 100)}%</b> дохода, хорошо: цель от 10%.` : `Откладываете <b>${Math.max(0, Math.round(r * 100))}%</b> дохода. Цель хотя бы 10%: <b>${tg0(inc * 0.1)}</b> в месяц, лучше в день зарплаты, пока деньги не разошлись.` });
+    tips.push({ i: '🐷', txt: r >= 0.1 ? `Откладываете <b>${Math.round(r * 100)}%</b> дохода, хорошо.` : `Откладываете ${Math.max(0, Math.round(r * 100))}% дохода. Цель 10%: <b>${tg0(inc * 0.1)}</b> в месяц.` });
   }
-  if (mustTot) tips.push({ i: '🛟', txt: `Подушка безопасности: на случай, если доход пропадет, нужно 3-6 месяцев обязательных платежей, это <b>${tg0(mustTot * 3)}</b>-${tg0(mustTot * 6)}.` });
-  if (spentAvg > 0 && undefAvg / spentAvg > 0.05) tips.push({ i: '❓', txt: `<b>${tg0(undefAvg)}</b> в месяц уходит непонятно куда (${Math.round(undefAvg / spentAvg * 100)}% трат). Ответьте на вопросы в «Вопросы и платежи», и картина станет точнее.` });
+  if (mustTot) tips.push({ i: '🛟', txt: `Подушка на 3-6 месяцев: <b>${tg0(mustTot * 3)}</b>-${tg0(mustTot * 6)}.` });
+  if (spentAvg > 0 && undefAvg / spentAvg > 0.05) tips.push({ i: '❓', txt: `<b>${tg0(undefAvg)}</b> в месяц непонятно куда. Ответьте на вопросы бухгалтера.` });
   $app.innerHTML = `
     <h1>Личное</h1>
     <div class="row" style="margin:0 2px 8px"><div class="monthsw"><button data-pmv="-1" ${many || pos <= 0 ? 'disabled' : ''}>‹</button><b>${esc(title)}</b><button data-pmv="1" ${many || pos >= ms.length - 1 ? 'disabled' : ''}>›</button></div>
