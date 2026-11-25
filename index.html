@@ -880,7 +880,7 @@ const PANS = [
   ['Траты', 'Обязательные', 'Транспорт и авто'],
   ['Траты', 'Дети', 'Ердос: на карту'], ['Траты', 'Дети', 'Еркеназ: на карту'], ['Траты', 'Дети', 'Асылым: на карту'],
   ['Траты', 'Дети', 'Ердос: обучение'], ['Траты', 'Дети', 'Еркеназ: обучение'], ['Траты', 'Дети', 'Асылым: обучение'],
-  ['Траты', 'Дети', 'Дети: общее (садик, школа, вещи)'], ['Траты', 'Продукты', 'Продукты (магазины)'],
+  ['Траты', 'Дети', 'Нурдос: садик'], ['Траты', 'Дети', 'Дети: общее (садик, школа, вещи)'], ['Траты', 'Продукты', 'Продукты (магазины)'],
   ['Траты', 'Импульсивные', 'Красота и одежда'], ['Траты', 'Импульсивные', 'Кафе, кофе, доставка еды'], ['Траты', 'Импульсивные', 'Сладкое и выпечка'], ['Траты', 'Импульсивные', 'Маркетплейсы'],
   ['Траты', 'Импульсивные', 'Развлечения и подписки'],
   ['Траты', 'Семья', 'Помощь семье: мама'], ['Траты', 'Семья', 'Помощь семье: брат Медет'], ['Траты', 'Семья', 'Помощь семье: папа'],
@@ -983,7 +983,7 @@ function drawPersonal() {
   const K = kidsPlan(D.ref || []);
   const kidsNow = K && !many ? K.cols.find(c => c.key === sel[0]) : null;
   // по каждому ребёнку за выбранный период: обучение, на карту, прочее (статьи «Имя: ...», «Дети: общее»)
-  const KN = ['Ердос', 'Еркеназ', 'Асылым'], kt = {};
+  const KN = ['Ердос', 'Еркеназ', 'Асылым', 'Нурдос'], kt = {};
   D.rows.filter(r => sel.includes(r.m) && r.sec === 'Траты' && r.grp === 'Дети').forEach(r => {
     const [who, what = ''] = r.item.split(':').map(s => s.trim());
     const k = KN.includes(who) ? who : 'Общее (садик, школа, вещи)';
@@ -1001,7 +1001,6 @@ function drawPersonal() {
       ${[...KN, 'Общее (садик, школа, вещи)'].filter(k => kt[k] && Math.abs(kTot(kt[k])) >= 1).map(k => { const x = kt[k], parts = [['обучение', x.cost || 0], ['на карту', x.card], ['прочее', x.other]].filter(p => Math.abs(p[1]) >= 1);
         return `<div style="margin-bottom:8px"><div class="row"><b>${esc(k)}</b><b>${tg0(kTot(x))}</b></div>${parts.length > 1 || (parts[0] && parts[0][0] !== 'прочее') ? `<div class="muted">${parts.map(p => p[0] + ' ' + tg0(p[1])).join(' · ')}</div>` : ''}</div>`; }).join('')}
       <div class="kv"><span>Всего на детей</span><b>${tg0(kidsTot)}</b></div>
-      ${eduPaid ? `<div class="kv"><span class="muted">Заплачено за обучение (рассрочка, Асылым)</span><span>${tg0(eduPaid)}</span></div>` : ''}
       <div class="muted" style="margin-top:4px">«Обучение»: сколько стоит курс в эти месяцы (Ердос программирование, Еркеназ английский 5 мес., Асылым; у Ердоса в ноябре потерянные 104 000). «На карту»: переводы детям минус то, что они вернули.</div>
     </div>` : '';
   const kidsHtml = perKid + (K ? `
@@ -1021,12 +1020,30 @@ function drawPersonal() {
   const fullM = ms.length > 1 ? ms[ms.length - 2] : ms[0];
   const must = ['Аренда квартиры', 'Коммунальные и связь'].map(n => ({ n, v: -D.rows.filter(r => r.m === fullM && r.item === n).reduce((a, r) => a + r.sum, 0) })).filter(x => x.v > 0);
   const mustTot = credits.reduce((a, x) => a + x.month, 0) + must.reduce((a, x) => a + x.v, 0);
-  const credHtml = credits.length ? `<div class="card">${credits.map(x => {
-    const end = x.from && x.count ? addM(x.from, x.count - 1) : '';
-    const now = monthNow(), leftPays = end ? Math.max(0, Math.min(x.count, mDiff(now, end) + 1)) : 0;
-    return `<div style="margin-bottom:10px"><div class="row"><b>${esc(x.name)}</b><b>${tg0(x.month)}/мес</b></div>
-      <div class="muted">${x.left ? 'долг ' + tg0(x.left) + ' · ' : ''}${end ? 'до ' + mLabel(end) + (leftPays ? ', осталось ' + leftPays + ' ' + plural(leftPays, 'платёж', 'платежа', 'платежей') : '') : ''}${x.note ? (end || x.left ? ' · ' : '') + esc(x.note) : ''}</div></div>`;
-  }).join('')}${must.map(x => `<div style="margin-bottom:10px"><div class="row"><b>${esc(x.n)}</b><b>${tg0(x.v)}/мес</b></div><div class="muted">как в ${mLabel(fullM)}</div></div>`).join('')}<div class="kv"><span><b>Всего обязательных в месяц</b></span><b class="gold">${tg0(mustTot)}</b></div></div>` : '';
+  // как рассрочки в «Отчётах»: оплачено N из M, осталось сумма, полоска (платёж текущего месяца считаем оплаченным)
+  const credLeft = x => {
+    const now = monthNow(), paid = x.from && x.count ? Math.max(0, Math.min(x.count, mDiff(x.from, now) + 1)) : 0;
+    return { paid, sum: x.left || (x.count ? (x.count - paid) * x.month : 0) };
+  };
+  const credLeftTot = credits.reduce((a, x) => a + credLeft(x).sum, 0);
+  // подробности одного кредита: осталось, оплачено N из M, полоска, примечание
+  const credInfo = x => {
+    const end = x.from && x.count ? addM(x.from, x.count - 1) : '', c = credLeft(x);
+    return `<div class="muted">${c.sum ? 'осталось ' + tg0(c.sum) : 'остаток не известен'}${x.count ? ` · оплачено ${c.paid} из ${x.count} · последний ${mLabel(end)}` : ''}</div>
+      ${x.count ? `<div class="bar"><i style="width:${Math.round(c.paid / x.count * 100)}%"></i></div>` : ''}
+      ${x.note ? `<div class="muted">${esc(x.note)}</div>` : ''}`;
+  };
+  // рассрочки Kaspi Кредита («Kaspi: ...») одной строкой, при нажатии список; остальные кредиты отдельно
+  const kaspi = credits.filter(x => /^Kaspi:/.test(x.name)), others = credits.filter(x => !/^Kaspi:/.test(x.name));
+  const kOpen = isOpen('cr:Kaspi'), kMonth = kaspi.reduce((a, x) => a + x.month, 0), kLeft = kaspi.reduce((a, x) => a + credLeft(x).sum, 0);
+  const kaspiHtml = kaspi.length ? `<div class="kv tg" data-tg="cr:Kaspi"><span>${arrow(kOpen)}Kaspi Кредит <span class="muted">(${kaspi.length} ${plural(kaspi.length, 'рассрочка', 'рассрочки', 'рассрочек')})</span></span><b>${tg0(kMonth)}/мес</b></div>
+    ${kOpen ? `<div style="padding:0 0 6px 22px"><div class="muted" style="margin-bottom:6px">осталось ${tg0(kLeft)}</div>${kaspi.map(x => `<div class="kv" style="font-size:13px"><span>${esc(x.name.replace(/^Kaspi:\s*/, ''))}</span><span>${tg0(x.month)}/мес</span></div><div style="margin:-2px 0 8px">${credInfo(x)}</div>`).join('')}</div>` : ''}` : '';
+  const credHtml = credits.length ? `<div class="card">${others.slice(0, 1).concat(kaspi.length ? [null] : [], others.slice(1)).map(x => {
+    if (!x) return kaspiHtml;
+    const k = 'cr:' + x.name, open = isOpen(k);
+    return `<div class="kv tg" data-tg="${esc(k)}"><span>${arrow(open)}${esc(x.name)}</span><b>${tg0(x.month)}/мес</b></div>
+      ${open ? `<div style="padding:0 0 10px 22px">${credInfo(x)}</div>` : ''}`;
+  }).join('')}${must.map(x => `<div class="kv"><span>${esc(x.n)} <span class="muted">(как в ${mLabel(fullM)})</span></span><b>${tg0(x.v)}/мес</b></div>`).join('')}<div class="kv"><span>Всего осталось по кредитам</span><b>${tg0(credLeftTot)}</b></div><div class="kv"><span><b>Всего обязательных в месяц</b></span><b class="gold">${tg0(mustTot)}</b></div></div>` : '';
   $app.innerHTML = `
     <h1>Личное</h1>
     <div class="row" style="margin:0 2px 8px"><div class="monthsw"><button data-pmv="-1" ${many || pos <= 0 ? 'disabled' : ''}>‹</button><b>${esc(title)}</b><button data-pmv="1" ${many || pos >= ms.length - 1 ? 'disabled' : ''}>›</button></div>
