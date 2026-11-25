@@ -1146,7 +1146,7 @@ function drawPersonal() {
     const interest = x => !/^Kaspi|рассрочк|садик/i.test(x.name);
     const cand = over > 1000 ? credits.filter(x => x.count && interest(x)).map(x => ({ x, c: credLeft(x) }))
       .filter(o => o.c.sum > 0 && (o.x.count - o.c.paid) - payoff(o.c.sum, o.x.month + over, rateOf(o.c.sum, o.x.month, o.x.count - o.c.paid)).k >= 2).sort((a, b) => a.c.sum - b.c.sum)[0] : null;
-    let txt = `Импульсивные: <b>${tg0(impAvg)}</b> в месяц${limI && over > 0 ? `, лимит превышен на <b>${tg0(over)}</b>` : ''}${top ? ` (больше всего ${esc(top[0].toLowerCase())})` : ''}.`;
+    let txt = `Импульсивные: <b>${tg0(impAvg)}</b> в месяц${limI && over > 0 ? `, лимит превышен на <b>${tg0(over)}</b>` : ''}${top ? ` (больше всего ${esc(top[0].toLowerCase())})` : ''}. Сюда попадают и вещи детям с маркетплейсов и из магазинов одежды: банк не показывает, для кого покупка.`;
 
     if (cand) {
       // платёж по графику плюс сэкономленное на импульсивных
