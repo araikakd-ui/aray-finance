@@ -1044,6 +1044,38 @@ function drawPersonal() {
     return `<div class="kv tg" data-tg="${esc(k)}"><span>${arrow(open)}${esc(x.name)}</span><b>${tg0(x.month)}/мес</b></div>
       ${open ? `<div style="padding:0 0 10px 22px">${credInfo(x)}</div>` : ''}`;
   }).join('')}${must.map(x => `<div class="kv"><span>${esc(x.n)} <span class="muted">(как в ${mLabel(fullM)})</span></span><b>${tg0(x.v)}/мес</b></div>`).join('')}<div class="kv"><span>Всего осталось по кредитам</span><b>${tg0(credLeftTot)}</b></div><div class="kv"><span><b>Всего обязательных в месяц</b></span><b class="gold">${tg0(mustTot)}</b></div></div>` : '';
+  // советы: по трём последним полным месяцам (текущий месяц ещё не полный)
+  const full3 = ms.slice(0, -1).slice(-3);
+  const avgM = f => full3.length ? -D.rows.filter(r => full3.includes(r.m) && f(r)).reduce((s, r) => s + r.sum, 0) / full3.length : 0;
+  const inc = -avgM(r => r.sec === 'Пришло'), spentAvg = avgM(r => r.sec === 'Траты'), savedAvg = avgM(r => r.sec === 'Накопления');
+  const impAvg = avgM(r => r.sec === 'Траты' && r.grp === 'Импульсивные'), undefAvg = avgM(r => r.sec === 'Траты' && r.grp === 'Не определено');
+  const credMonth = credits.reduce((a, x) => a + x.month, 0), tips = [];
+  if (full3.length && impAvg > 1000) {
+    const limI = lim['Импульсивные'], over = limI ? impAvg - limI : impAvg * 0.3, it = {};
+    D.rows.filter(r => full3.includes(r.m) && r.sec === 'Траты' && r.grp === 'Импульсивные' && r.sum < 0).forEach(r => { it[r.item] = (it[r.item] || 0) - r.sum; });
+    const top = Object.entries(it).sort((a, b) => b[1] - a[1])[0];
+    // кредит, который реально закроется заметно раньше (минимум на 2 месяца), самый маленький из таких
+    const cand = over > 1000 ? credits.filter(x => x.count).map(x => ({ x, c: credLeft(x) }))
+      .filter(o => o.c.sum > 0 && (o.x.count - o.c.paid) - Math.ceil(o.c.sum / (o.x.month + over)) >= 2).sort((a, b) => a.c.sum - b.c.sum)[0] : null;
+    let txt = `Импульсивные покупки в среднем <b>${tg0(impAvg)}</b> в месяц${limI ? (over > 0 ? `, это на <b>${tg0(over)}</b> больше лимита` : ', в пределах лимита') : ''}.`;
+    if (top) txt += ` Больше всего уходит на «${esc(top[0])}»: ${tg0(top[1] / full3.length)} в месяц.`;
+    if (cand) {
+      // платёж по графику плюс сэкономленное на импульсивных
+      const n = Math.ceil(cand.c.sum / (cand.x.month + over)), was = cand.x.count - cand.c.paid;
+      txt += ` Если ${limI ? 'держаться лимита' : 'сократить их на 30%'}, освободится ${tg0(over)} в месяц. Добавляйте их к платежу, и «${esc(cand.x.name.replace(/^Kaspi:\s*/, ''))}» (осталось ${tg0(cand.c.sum)}) закроется за ${n} ${plural(n, 'месяц', 'месяца', 'месяцев')} вместо ${was}.`;
+    } else if (over > 1000) txt += ` Если ${limI ? 'держаться лимита' : 'сократить их на 30%'}, за год останется ${tg0(over * 12)}.`;
+    tips.push({ i: '🛍️', txt });
+  }
+  if (inc > 0 && credMonth) {
+    const p = credMonth / inc;
+    tips.push({ i: '💳', txt: `Кредиты и рассрочки <b>${tg0(credMonth)}</b> в месяц, это <b>${Math.round(p * 100)}%</b> дохода. ${p > 0.4 ? 'Много: больше 40%, новые рассрочки лучше не брать, сначала закрыть самые маленькие.' : p > 0.3 ? 'Близко к пределу: лучше держать до 30%.' : 'В норме: до 30% дохода.'}` });
+  }
+  if (inc > 0) {
+    const r = savedAvg / inc;
+    tips.push({ i: '🐷', txt: r >= 0.1 ? `Откладываете <b>${Math.round(r * 100)}%</b> дохода, хорошо: цель от 10%.` : `Откладываете <b>${Math.max(0, Math.round(r * 100))}%</b> дохода. Цель хотя бы 10%: <b>${tg0(inc * 0.1)}</b> в месяц, лучше в день зарплаты, пока деньги не разошлись.` });
+  }
+  if (mustTot) tips.push({ i: '🛟', txt: `Подушка безопасности: на случай, если доход пропадёт, нужно 3-6 месяцев обязательных платежей, это <b>${tg0(mustTot * 3)}</b>-${tg0(mustTot * 6)}.` });
+  if (spentAvg > 0 && undefAvg / spentAvg > 0.05) tips.push({ i: '❓', txt: `<b>${tg0(undefAvg)}</b> в месяц уходит непонятно куда (${Math.round(undefAvg / spentAvg * 100)}% трат). Ответьте на вопросы в «Вопросы и платежи», и картина станет точнее.` });
   $app.innerHTML = `
     <h1>Личное</h1>
     <div class="row" style="margin:0 2px 8px"><div class="monthsw"><button data-pmv="-1" ${many || pos <= 0 ? 'disabled' : ''}>‹</button><b>${esc(title)}</b><button data-pmv="1" ${many || pos >= ms.length - 1 ? 'disabled' : ''}>›</button></div>
@@ -1067,6 +1099,7 @@ function drawPersonal() {
       <button class="btn sec" data-plimall style="margin-top:8px">${PLIMALL ? 'Скрыть лимиты' : '🎯 Лимиты в месяц'}</button>
       ${PLIMALL ? `<div style="margin-top:8px">${PORDER.map(g => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><span style="flex:1">${esc(g)}</span><input data-pliml="${esc(g)}" inputmode="numeric" placeholder="без лимита" value="${lim[g] || ''}" style="width:45%;padding:6px"></div>`).join('')}
         <button class="btn" data-plimsave>Сохранить лимиты</button><div class="muted" style="margin-top:4px">Лимит на месяц. Если траты больше, группа станет красной, а в «Сводке» появится предупреждение.</div></div>` : ''}</div>`)}
+    ${tips.length ? block('ptips', 'Советы', tips.length + ' ' + plural(tips.length, 'совет', 'совета', 'советов'), `<div class="card">${tips.map(t => `<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line, rgba(128,128,128,.15))"><span>${t.i}</span><span>${t.txt}</span></div>`).join('')}<div class="muted" style="margin-top:6px">По трём последним полным месяцам: ${full3.map(mLabel).join(', ')}.</div></div>`) : ''}
     ${block('pmon', 'По месяцам', '', `<div class="card"><div class="lg">${PORDER.map(g => `<span style="--c:${PCOL[g]}">${esc(g)}</span>`).join('')}</div>${stackBars(bars, ms.map(m => MSHORT[Number(m.slice(5)) - 1]), { on: PM })}<div class="muted" style="margin-top:6px">Нажмите на столбик, чтобы открыть месяц.</div></div>`)}
     ${kidsHtml ? block('pkids', 'Дети', tg0(kidsTot), kidsHtml) : ''}
     ${credits.length ? block('pcred', 'Обязательные платежи', tg0(mustTot) + '/мес', credHtml) : ''}
