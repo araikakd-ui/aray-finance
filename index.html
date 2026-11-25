@@ -990,7 +990,7 @@ function personalRows(D) {
 let PTODO_ALL = false, PLIM = '';
 // «Вопрос»: уточнение без статьи, ответ текстом (или голосовым боту); платёж: выбрать статью
 const isQ = t => t.bank === 'Вопрос';
-const isDone = t => isQ(t) ? !!t.comment : !!t.answer;
+const isDone = t => isQ(t) ? !!t.comment : !!(t.answer || t.comment);   // без статьи, но с пояснением: разберет Арайлым
 function todoHtml(D) {
   const all = D.todo || [], open = all.filter(t => !isDone(t));
   const dkey = t => t.date.split('.').reverse().join('');
@@ -1008,7 +1008,7 @@ function todoHtml(D) {
       <div class="row"><b>${esc(t.who)}</b><b class="${t.sum < 0 ? '' : 'under'}">${t.sum > 0 ? '+' : ''}${tg0(t.sum)}</b></div>
       <div class="muted">${esc(t.date)} · ${esc(t.bank)}${t.answer ? ' · <span class="under">' + esc(t.answer) + (t.by ? ' (' + esc(t.by) + ')' : '') + '</span>' : ''}</div>
       <select data-tans style="margin-top:6px">${opts(t, t.answer)}</select>
-      <div style="display:flex;gap:6px;margin-top:6px"><input data-tcom placeholder="комментарий (необязательно)" value="${esc(t.comment)}"><button class="btn" data-tsave style="width:auto;padding:8px 12px">Сохранить</button></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><input data-tcom placeholder="что это? (если не знаете статью)" value="${esc(t.comment)}"><button class="btn" data-tsave style="width:auto;padding:8px 12px">Сохранить</button></div>
     </div>`).join('') : '<div class="muted" style="padding:8px 0">Всё разобрано 👍</div>'}
   </div>`;
 }
@@ -1016,7 +1016,7 @@ function bindTodo() {
   $app.querySelectorAll('[data-tall]').forEach(b => b.onclick = () => { PTODO_ALL = b.dataset.tall === '1'; drawPersonal(); });
   $app.querySelectorAll('[data-tsave]').forEach(b => b.onclick = async () => {
     const box = b.closest('[data-tid]'), id = box.dataset.tid, sel = box.querySelector('[data-tans]'), item = sel ? sel.value : '', comment = box.querySelector('[data-tcom]').value.trim();
-    if (sel && !item) return toast('Выберите статью');
+    if (sel && !item && !comment) return toast('Выберите статью или напишите, что это');
     if (!sel && !comment) return toast('Напишите ответ');
     const t = PDATA.todo.find(x => x.id === id), old = { answer: t.answer, comment: t.comment, by: t.by };
     Object.assign(t, { answer: item, comment, by: ME.user.name });   // сразу на экране
