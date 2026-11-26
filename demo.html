@@ -376,7 +376,23 @@
     ov.querySelectorAll('[data-m]').forEach(b => b.onclick = () => choose(b.dataset.m));
   }
 
+  // Карточка «Ваш финансист» на главном экране примера (имя вымышленное)
+  function finCard() {
+    const app = document.getElementById('app'); if (!app || app.querySelector('.demo-fin')) return;
+    const h = [...app.querySelectorAll('h1')].find(x => /^(Что сегодня|Личное)/.test(x.textContent.trim())); if (!h) return;
+    const c = document.createElement('div'); c.className = 'card demo-fin';
+    c.style.cssText = 'display:flex;gap:12px;align-items:center;margin:4px 0 12px';
+    c.innerHTML = `<div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#2fd1b2,#0f8a7d);color:#fff;font-weight:700;font-size:20px;display:flex;align-items:center;justify-content:center;flex:none">А</div>
+      <div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--hint,#9aa0a6)">Ваш финансист</div><b>Алия</b>
+      <div style="font-size:13px;color:var(--hint,#9aa0a6);line-height:1.35">Сверяет выписки, отвечает на вопросы, раз в месяц присылает итог</div></div>
+      <button class="btn sec" style="width:auto;padding:8px 12px;font-size:13px;flex:none">Написать</button>`;
+    c.querySelector('button').onclick = () => toast('Это пример: в вашем приложении здесь связь с вашим финансистом');
+    const sub = h.nextElementSibling && h.nextElementSibling.classList.contains('muted') ? h.nextElementSibling : h;
+    sub.after(c);
+  }
+
   function bar() {
+    finCard();
     if (MODE === 'self') document.querySelectorAll('#app .card').forEach(c => { if (/Оплатила за бизнес/.test(c.textContent) && c.style.display !== 'none') c.style.display = 'none'; });
     const app = document.getElementById('app'); if (!app || app.querySelector('.demo-bar')) return;
     const b = document.createElement('div'); b.className = 'demo-bar';
