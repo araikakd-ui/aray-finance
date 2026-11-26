@@ -387,7 +387,7 @@
       <div style="font-size:13px;color:var(--hint,#9aa0a6);line-height:1.35">Каждую неделю сверяет выписки и задает вопросы, раз в месяц присылает итог</div></div>
       <button class="btn sec" style="width:auto;padding:8px 12px;font-size:13px;flex:none">Написать</button>`;
     c.querySelector('button').onclick = () => toast('Это пример: в вашем приложении здесь связь с вашим финансистом');
-    const sub = h.nextElementSibling && h.nextElementSibling.classList.contains('muted') ? h.nextElementSibling : h;
+    const sub = app.querySelector('.demo-hint') || (h.nextElementSibling && h.nextElementSibling.classList.contains('muted') ? h.nextElementSibling : h);
     sub.after(c);
     if (MODE === 'biz') {   // пример салона: связь с Altegio
       const a = document.createElement('div'); a.className = 'card demo-fin';
@@ -397,7 +397,28 @@
     }
   }
 
+  // Подсказка под заголовком экрана: что здесь видно и зачем
+  const HINTS = [
+    [/^Что сегодня/, () => SHOP ? 'Продажи за сегодня в магазине и в Kaspi, сколько положено продавцам и какие заказы собрать.' : 'Выручка за сегодня и сколько положено каждому мастеру: сразу видно, хватит ли денег на зарплаты.'],
+    [/^Отчёты/, () => 'Прибыль за месяц, а не просто остаток на счету: видно, что вышло за план и где теряются деньги.'],
+    [/^Закупка/, () => 'Что заканчивается и что заказать: без пустых полок и без лишнего товара на складе.'],
+    [/^Документы/, () => 'Чеки и накладные от сотрудников: вы проверяете и утверждаете, ничего не теряется.'],
+    [/^Личное/, () => 'Сколько пришло и куда ушло за месяц: видно, на что уходит больше, чем кажется.'],
+    [/^Аналитика/, () => 'Выводы финансиста: что улучшить и какое действие сделать в этом месяце.'],
+  ];
+  function hint() {
+    const app = document.getElementById('app'); if (!app || app.querySelector('.demo-hint')) return;
+    const h = app.querySelector('h1'); if (!h) return;
+    const m = HINTS.find(([re]) => re.test(h.textContent.trim())); if (!m) return;
+    const d = document.createElement('div'); d.className = 'demo-hint';
+    d.style.cssText = 'margin:-2px 2px 10px;padding:8px 10px;border-radius:10px;background:rgba(43,179,163,.14);color:var(--text,#fff);font-size:13px;line-height:1.4';
+    d.textContent = '💡 ' + m[1]();
+    const sub = h.nextElementSibling && h.nextElementSibling.classList.contains('muted') ? h.nextElementSibling : h;
+    sub.after(d);
+  }
+
   function bar() {
+    hint();
     finCard();
     if (MODE === 'self') document.querySelectorAll('#app .card').forEach(c => { if (/Оплатила за бизнес/.test(c.textContent) && c.style.display !== 'none') c.style.display = 'none'; });
     const app = document.getElementById('app'); if (!app || app.querySelector('.demo-bar')) return;
