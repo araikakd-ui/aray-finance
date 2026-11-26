@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<title>«Демо-маркет» (пример магазина): Финансы с Арайлым</title>
+<title>«Демо-маркет» (пример магазина): EsepDos</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   /* Свой вид «Финансы с Арайлым»: темная тема по умолчанию, светлая ниже (html.light) */
@@ -176,6 +176,12 @@
 (function () {
   const D = window.DEMO;
   const SHOP = D.kind === 'shop';   // demo-shop.html: пример магазина
+  const QM = new URLSearchParams(location.search).get('m');
+  if (['biz', 'shop', 'self'].includes(QM)) {
+    sessionStorage.setItem('DEMO_MODE', QM); sessionStorage.setItem('DEMO_ROLE', 'owner');
+    try { const th = localStorage.getItem('aray_theme'); localStorage.clear(); if (th) localStorage.setItem('aray_theme', th); } catch (e) {}
+    history.replaceState(null, '', location.pathname);
+  }
   let MODE = SHOP ? 'shop' : (sessionStorage.getItem('DEMO_MODE') || '');
   if (!SHOP && MODE === 'shop') { location.replace('demo-shop.html'); return; }
   let ROLE = sessionStorage.getItem('DEMO_ROLE') || 'owner';   // owner собственник, admin администратор, fin финансист
@@ -337,7 +343,7 @@
   // Куда ведет кнопка «Хочу такое же приложение» и фото для блока «Учет ведет живой финансист»
   const CONTACT = 'https://t.me/arailym_amerzhan';   // личный Telegram Арайлым; когда клиентов станет много, отдельный бот
   const PHOTO = '';     // файл фото рядом с demo.html, например 'arailym.jpg'
-  const CTA_TEXT = 'Здравствуйте! Хочу подключить такое же приложение, как в демо «Финансы с Арайлым».';
+  const CTA_TEXT = 'Здравствуйте! Посмотрел(а) демо EsepDos, хочу подключить такое же приложение.';
   const ctaUrl = () => CONTACT + (CONTACT.includes('?') ? '&' : '?') + 'text=' + encodeURIComponent(CTA_TEXT);
   const CTA_BTN = !CONTACT ? '' : `<a class="btn demo-cta" href="#" data-cta style="display:block;text-align:center;text-decoration:none;background:#f4c542;color:#1a1a1a;font-weight:700;font-size:17px;padding:15px 12px;border-radius:14px;box-shadow:0 4px 14px rgba(244,197,66,.25)">Хочу такое же приложение</a>`;
   document.addEventListener('click', e => { const a = e.target.closest('[data-cta]'); if (!a) return; e.preventDefault(); window.open(ctaUrl(), '_blank'); });
@@ -356,56 +362,16 @@
   }
   window.demoChoose = choose;
 
-  // Вопросы и ответы на первом экране
-  const FAQ = [
-    ['Нужно что-то устанавливать?', 'Нет. Бот и приложение открываются прямо в Telegram, на телефоне и на компьютере.'],
-    ['Сколько времени это занимает у меня?', 'Купили, сразу фото чека боту: 10 секунд. Раз в месяц ответить на мои вопросы по непонятным платежам: 10-15 минут.'],
-    ['Я забываю отправлять чеки. Это сработает?', 'Да. Каждый месяц я сверяю выписки банков и нахожу все, что не попало через бота. Учет не рассыпается, даже если вы пропустили неделю.'],
-    ['Кто видит мои данные?', 'Только вы, я и те, кого вы сами назовете. Ваши выписки и цифры я не показываю и не передаю другим людям. Подробнее в блоке «Конфиденциальность» выше.'],
-    ['Можно только бизнес или только личное?', 'Да. Бизнес и личные финансы подключаются отдельно. Если нужно и то и другое, объединяю в одном приложении: видно и прибыль бизнеса, и сколько владелец забирает и тратит на семью.'],
-    ['Можно дать доступ бухгалтеру или сотрудникам?', 'Да: бухгалтеру, финансисту, управляющему, администратору или продавцу. Каждый видит только свое: продавец свои продажи и задачи, но не прибыль и не ваши личные траты.'],
-    ['Чем это лучше Excel или обычного приложения учета?', 'В Excel и приложениях все вносите вы сами, и через месяц учет обычно бросают. Здесь вы только отправляете чеки, а сверяю, разношу и объясняю цифры я.'],
-    ['От чего зависит цена?', 'Личные финансы по прайсу. Для бизнеса в прайсе цена «от»: для небольшого бизнеса с одной точкой. Если точек, сотрудников или операций больше, цена выше: точную сумму называю до начала работы, и без вашего согласия она не меняется. Если нужна доработка приложения под ваш бизнес (свои отчеты, связь с вашей программой учета), она обсуждается и считается отдельно.'],
-    ['Можно начать прямо с сегодняшнего дня?', 'Учет можно вести с сегодняшнего дня, но для внедрения мне нужна история хотя бы за 1-2 прошлых месяца. Без нее не видно, какие у вас обычные доходы и расходы, и не из чего поставить план и лимиты. Есть два варианта:<br>1. <b style="color:var(--text,#fff)">Выписки.</b> Вы присылаете выписки банков за 1-2 месяца (или с января), я их разбираю. Это и есть внедрение по прайсу.<br>2. <b style="color:var(--text,#fff)">Готовые отчеты (для бизнеса).</b> Если у бизнеса уже есть ОПиУ или ДДС (в Excel или от бухгалтера), присылаете их, я переношу в приложение, и начинаем сразу с оплаченного месяца. Так дешевле: оплачиваете только настройку приложения, без разбора выписок, от 25 000 тг.'],
-  ];
-  const acc = (title, body, open) => `<details class="demo-acc"${open ? ' open' : ''}><summary>${title}</summary><div class="demo-acc-b">${body}</div></details>`;
-
   function chooser() {
     const ov = document.createElement('div'); ov.className = 'demo-ov';
-    const ava = PHOTO ? `<img src="${PHOTO}" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none">`
-      : '<div style="width:56px;height:56px;border-radius:50%;background:#2bb3a3;color:#fff;font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">А</div>';
-    ov.innerHTML = `<div style="color:#2bb3a3;font-weight:600;font-size:14px">Финансы с Арайлым</div>
-      <h1 style="font-size:26px;line-height:1.2">Ваши деньги под контролем: для бизнеса и для семьи</h1>
-      <p style="font-size:16px;color:var(--text,#fff)">Отправляете чеки боту в Telegram, я веду учет и раз в месяц показываю: сколько заработали, куда ушли деньги и что улучшить.</p>
-      ${CTA_BTN}
-      <h2 style="margin:8px 0 0;font-size:18px">Посмотрите пример</h2>
-      <p>Нажмите, внутри работают все кнопки. Цифры и имена вымышленные.</p>
+    ov.innerHTML = `<a href="start.html" style="color:#2bb3a3;text-decoration:none;font-size:14px">‹ О сервисе и цены</a>
+      <div><div style="font-size:24px;font-weight:800">EsepDos</div><div style="color:var(--hint,#9aa0a6);font-size:14px">финансы с Арайлым · демо</div></div>
+      <h1 style="font-size:24px;line-height:1.2;margin-top:6px">Выберите пример</h1>
+      <p>Так будет выглядеть ваше приложение. Внутри работают все кнопки, цифры и имена вымышленные, изменения не сохраняются.</p>
       <button class="demo-card demo-pick" data-m="biz"><b>💇 Бизнес: услуги</b><span>Салон, студия, клиника: выручка за день, прибыль, сотрудники и их процент</span></button>
       <button class="demo-card demo-pick" data-m="shop"><b>🛍️ Бизнес: торговля</b><span>Магазин, Kaspi Магазин, опт: продажи, остатки и что заказать, наценка</span></button>
       <button class="demo-card demo-pick" data-m="self"><b>👨‍👩‍👧 Для себя</b><span>Личные финансы: куда уходят деньги, лимиты, кредиты, цели</span></button>
-      <div class="demo-accs">
-        ${acc('🙋‍♀️ Почему со мной', `<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:8px">${ava}<div><b style="color:var(--text,#fff)">Арайлым</b><br>бухгалтер и финансовый аналитик</div></div>
-          <b style="color:var(--text,#fff)">ИИ только инструмент. Думает финансист.</b><br>
-          🤖 ИИ читает чеки и голосовые, раскладывает расходы по статьям.<br>
-          👩‍💼 Я проверяю каждую цифру, сверяю выписки, нахожу пропущенное, задаю вопросы и раз в месяц говорю, что улучшить: где утекают деньги, что сократить, как копить.`)}
-        ${acc('⚙️ Как это работает', `<ol style="margin:0;padding-left:20px">
-          <li><b style="color:var(--text,#fff)">Подключаю.</b> Настраиваю бота и приложение под вас, разбираю выписки за выбранный период.</li>
-          <li><b style="color:var(--text,#fff)">Вы отправляете чеки боту.</b> Фото, текстом или голосом, по-русски или по-казахски: 10 секунд.</li>
-          <li><b style="color:var(--text,#fff)">Я сверяю выписки.</b> Нахожу пропущенное, по непонятным платежам задаю вопросы прямо в приложении.</li>
-          <li><b style="color:var(--text,#fff)">Раз в месяц итог.</b> Сколько пришло, куда ушло, сколько осталось и что улучшить.</li></ol>`)}
-        ${acc('💰 Сколько стоит', PRICE)}
-        ${acc('🔒 Конфиденциальность', `<b style="color:var(--text,#fff)">Какие данные я получаю.</b> Выписки банков, фото чеков и накладных, голосовые и сообщения боту, данные о сотрудниках, если подключаете бизнес.<br>
-          <b style="color:var(--text,#fff)">Зачем.</b> Только чтобы вести ваш учет и готовить отчеты. Ни для чего другого ваши данные не используются.<br>
-          <b style="color:var(--text,#fff)">Кто видит.</b> Вы, я и те, кого вы сами назовете. Каждый сотрудник видит только свое.<br>
-          <b style="color:var(--text,#fff)">Третьим лицам не передаю.</b> Ваши цифры, выписки и имена я никому не показываю и не пересказываю. Исключение только одно: если этого прямо требует закон.<br>
-          <b style="color:var(--text,#fff)">Где хранятся.</b> В моем закрытом рабочем аккаунте и в Telegram. Для распознавания чеков и голосовых используются ИИ-сервисы: им передается только файл, который нужно прочитать.<br>
-          <b style="color:var(--text,#fff)">После окончания работы.</b> По вашей просьбе передаю вам все данные и удаляю их у себя.<br>
-          <span style="font-size:13px">Это краткая версия. Полная политика конфиденциальности и согласие на обработку данных будут в договоре.</span>`)}
-      </div>
-      <h2 style="margin:8px 0 0;font-size:18px">Вопросы и ответы</h2>
-      <div class="demo-accs">${FAQ.map(([q, a]) => acc(q, a)).join('')}</div>
-      ${CTA_BTN}
-      <p style="font-size:13px">Это демонстрационная версия: все показатели и имена вымышлены, изменения не сохраняются. После подключения в приложении будут ваши данные, а учет буду вести я.</p>`;
+      ${CTA_BTN}`;
     document.body.appendChild(ov);
     ov.querySelectorAll('[data-m]').forEach(b => b.onclick = () => choose(b.dataset.m));
   }
