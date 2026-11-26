@@ -332,8 +332,8 @@
     <tr><td colspan="2"><b>Бизнес</b> <span style="background:#f4c542;color:#1a1a1a;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px">скидка до 31 декабря</span></td></tr><tr><td>выписки за 2 месяца</td><td><s style="opacity:.6;font-weight:400">100&nbsp;000</s><br>50&nbsp;000&nbsp;тг</td></tr><tr><td>выписки с января 2026 г. (11 месяцев)</td><td><s style="opacity:.6;font-weight:400">250&nbsp;000</s><br>120&nbsp;000&nbsp;тг</td></tr>
     <tr><td colspan="2"><b>Бизнес с готовыми ОПиУ или ДДС</b></td></tr><tr><td>переносим ваши отчеты в приложение, без разбора выписок</td><td>от 25 000 тг</td></tr></table>
     <h3>Сопровождение в месяц</h3>
-    <p style="margin:0 0 6px">Каждый месяц ваш финансист разбирает выписки и чеки, отвечает на вопросы, обновляет приложение и присылает отчет: сколько пришло, куда ушли деньги, сколько осталось.</p>
-    <p style="margin:0 0 6px"><b>Зачем каждый месяц.</b> Мы все люди: через 1-2 недели легко забыть отправить чек боту или совсем забросить учет. Каждый месяц финансист сверяет выписки, находит пропущенное, задает вопросы и держит вас на контроле. Так учет не бросается, а привычка закрепляется. Для бизнеса ОПиУ и ДДС в Excel каждый месяц входят в стоимость. Бухгалтерия и сдача налоговых отчетов в стоимость не входят, их можно добавить отдельно.</p>
+    <p style="margin:0 0 6px">Каждую неделю ваш финансист разбирает выписки и чеки, задает вопросы по непонятным платежам и обновляет приложение, а раз в месяц присылает отчет: сколько пришло, куда ушли деньги, сколько осталось.</p>
+    <p style="margin:0 0 6px"><b>Зачем регулярно.</b> Мы все люди: через 1-2 недели легко забыть отправить чек боту или совсем забросить учет. Каждую неделю финансист сверяет выписки, находит пропущенное, задает вопросы и держит вас на контроле. Так учет не бросается, а привычка закрепляется. Для бизнеса ОПиУ и ДДС в Excel каждый месяц входят в стоимость. Бухгалтерия и сдача налоговых отчетов в стоимость не входят, их можно добавить отдельно.</p>
     <table><tr><td>личные финансы</td><td>20 000 тг</td></tr><tr><td>бизнес</td><td>от 100 000 тг</td></tr></table>
     <p style="margin:6px 0 0">Цена бизнеса «от»: для одной точки. Если точек или сотрудников больше, точную цену называем до начала работы. Доработки приложения под ваш бизнес обсуждаются отдельно.</p>
     <h3>Дополнительно</h3>
@@ -368,7 +368,7 @@
       <div><div style="font-size:24px;font-weight:800">EsepDos</div><div style="color:var(--hint,#9aa0a6);font-size:14px">финансы с Арайлым · демо</div></div>
       <h1 style="font-size:24px;line-height:1.2;margin-top:6px">Выберите пример</h1>
       <p>Так будет выглядеть ваше приложение. Внутри работают все кнопки, цифры и имена вымышленные, изменения не сохраняются.</p>
-      <button class="demo-card demo-pick" data-m="biz"><b>💇 Бизнес: услуги</b><span>Салон, студия, клиника: выручка за день, прибыль, сотрудники и их процент</span></button>
+      <button class="demo-card demo-pick" data-m="biz"><b>💇 Бизнес: услуги</b><span>Салон, студия, клиника: выручка за день, прибыль, сотрудники и их процент, связь с Altegio</span></button>
       <button class="demo-card demo-pick" data-m="shop"><b>🛍️ Бизнес: торговля</b><span>Магазин, Kaspi Магазин, опт: продажи, остатки и что заказать, наценка</span></button>
       <button class="demo-card demo-pick" data-m="self"><b>👨‍👩‍👧 Для себя</b><span>Личные финансы: куда уходят деньги, лимиты, кредиты, цели</span></button>
       ${CTA_BTN}`;
@@ -384,7 +384,7 @@
     c.style.cssText = 'display:flex;gap:12px;align-items:center;margin:4px 0 12px';
     c.innerHTML = `<div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#2fd1b2,#0f8a7d);color:#fff;font-weight:700;font-size:20px;display:flex;align-items:center;justify-content:center;flex:none">А</div>
       <div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--hint,#9aa0a6)">Ваш финансист</div><b>Алия</b>
-      <div style="font-size:13px;color:var(--hint,#9aa0a6);line-height:1.35">Сверяет выписки, отвечает на вопросы, раз в месяц присылает итог</div></div>
+      <div style="font-size:13px;color:var(--hint,#9aa0a6);line-height:1.35">Каждую неделю сверяет выписки и задает вопросы, раз в месяц присылает итог</div></div>
       <button class="btn sec" style="width:auto;padding:8px 12px;font-size:13px;flex:none">Написать</button>`;
     c.querySelector('button').onclick = () => toast('Это пример: в вашем приложении здесь связь с вашим финансистом');
     const sub = h.nextElementSibling && h.nextElementSibling.classList.contains('muted') ? h.nextElementSibling : h;
