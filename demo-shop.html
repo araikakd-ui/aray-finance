@@ -368,7 +368,7 @@
       <div><div style="font-size:24px;font-weight:800">EsepDos</div><div style="color:var(--hint,#9aa0a6);font-size:14px">финансы с Арайлым · демо</div></div>
       <h1 style="font-size:24px;line-height:1.2;margin-top:6px">Выберите пример</h1>
       <p>Так будет выглядеть ваше приложение. Внутри работают все кнопки, цифры и имена вымышленные, изменения не сохраняются.</p>
-      <button class="demo-card demo-pick" data-m="biz"><b>💇 Бизнес: услуги</b><span>Салон, студия, клиника: выручка за день, прибыль, сотрудники и их процент, связь с Altegio</span></button>
+      <button class="demo-card demo-pick" data-m="biz"><b>💇 Бизнес: услуги</b><span>Салон, студия, клиника: выручка за день, прибыль, сотрудники и их процент. В примере салон работает в Altegio</span></button>
       <button class="demo-card demo-pick" data-m="shop"><b>🛍️ Бизнес: торговля</b><span>Магазин, Kaspi Магазин, опт: продажи, остатки и что заказать, наценка</span></button>
       <button class="demo-card demo-pick" data-m="self"><b>👨‍👩‍👧 Для себя</b><span>Личные финансы: куда уходят деньги, лимиты, кредиты, цели</span></button>
       ${CTA_BTN}`;
@@ -389,6 +389,12 @@
     c.querySelector('button').onclick = () => toast('Это пример: в вашем приложении здесь связь с вашим финансистом');
     const sub = h.nextElementSibling && h.nextElementSibling.classList.contains('muted') ? h.nextElementSibling : h;
     sub.after(c);
+    if (MODE === 'biz') {   // пример салона: связь с Altegio
+      const a = document.createElement('div'); a.className = 'card demo-fin';
+      a.style.cssText = 'margin:0 0 12px;font-size:13px;line-height:1.4;color:var(--hint,#9aa0a6)';
+      a.innerHTML = '🔗 <b style="color:var(--text,#fff)">Этот салон работает в Altegio.</b> Выручка по мастерам и остатки товаров подтягиваются оттуда сами, а приход по накладной бот заносит в Altegio. Если у вас другая программа или ее нет, приложение настроим под вашу.';
+      c.after(a);
+    }
   }
 
   function bar() {
