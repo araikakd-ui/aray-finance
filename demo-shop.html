@@ -300,6 +300,16 @@
     .demo-card b{display:block;font-size:18px;margin-bottom:4px}.demo-card span{color:var(--hint,#9aa0a6);font-size:14px;line-height:1.35}
     .demo-price table{width:100%;border-collapse:collapse;font-size:14px}.demo-price td{padding:6px 0;border-bottom:1px solid rgba(128,128,128,.2)}
     .demo-price td:last-child{text-align:right;white-space:nowrap;font-weight:600}.demo-price h3{margin:14px 0 4px;font-size:15px}
+    .demo-pick{cursor:pointer;position:relative;padding-right:34px}.demo-pick::after{content:'›';position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:26px;color:#2bb3a3}
+    .demo-pick b{font-size:17px}
+    .demo-accs{display:flex;flex-direction:column;gap:8px}
+    .demo-acc{background:var(--bg,#1a1e25);border-radius:14px;padding:0 16px}
+    .demo-acc summary{list-style:none;cursor:pointer;padding:14px 22px 14px 0;font-weight:600;font-size:15px;position:relative}
+    .demo-acc summary::-webkit-details-marker{display:none}
+    .demo-acc summary::after{content:'+';position:absolute;right:0;top:50%;transform:translateY(-50%);font-size:22px;color:#2bb3a3;font-weight:400}
+    .demo-acc[open] summary::after{content:'−'}
+    .demo-acc-b{padding:0 0 14px;color:var(--hint,#9aa0a6);font-size:14px;line-height:1.45}
+    .demo-acc-b li{margin-bottom:6px}
     body.demo-self nav [data-tab="home"],body.demo-self nav [data-tab="docs"],body.demo-self nav [data-tab="buy"],body.demo-self nav [data-tab="reports"]{display:none!important}`;
   document.head.appendChild(css);
 
@@ -344,36 +354,50 @@
   }
   window.demoChoose = choose;
 
+  // Вопросы и ответы на первом экране
+  const FAQ = [
+    ['Нужно что-то устанавливать?', 'Нет. Бот и приложение открываются прямо в Telegram, на телефоне и на компьютере.'],
+    ['Сколько времени это занимает у меня?', 'Купили, сразу фото чека боту: 10 секунд. Раз в месяц ответить на мои вопросы по непонятным платежам: 10-15 минут.'],
+    ['Я забываю отправлять чеки. Это сработает?', 'Да. Каждый месяц я сверяю выписки банков и нахожу все, что не попало через бота. Учет не рассыпается, даже если вы пропустили неделю.'],
+    ['Кто видит мои данные?', 'Только вы, я и те, кого вы сами назовете. Ваши выписки и цифры я не показываю и не передаю другим людям.'],
+    ['Можно только бизнес или только личное?', 'Да. Бизнес и личные финансы подключаются отдельно. Если нужно и то и другое, объединяю в одном приложении: видно и прибыль бизнеса, и сколько владелец забирает и тратит на семью.'],
+    ['Можно дать доступ бухгалтеру или сотрудникам?', 'Да: бухгалтеру, финансисту, управляющему, администратору или продавцу. Каждый видит только свое: продавец свои продажи и задачи, но не прибыль и не ваши личные траты.'],
+    ['Чем это лучше Excel или обычного приложения учета?', 'В Excel и приложениях все вносите вы сами, и через месяц учет обычно бросают. Здесь вы только отправляете чеки, а сверяю, разношу и объясняю цифры я.'],
+    ['С какого периода можно начать?', 'С текущего месяца, с прошлого или с января: я разберу выписки за выбранный период, и сразу будет видна картина.'],
+  ];
+  const acc = (title, body, open) => `<details class="demo-acc"${open ? ' open' : ''}><summary>${title}</summary><div class="demo-acc-b">${body}</div></details>`;
+
   function chooser() {
     const ov = document.createElement('div'); ov.className = 'demo-ov';
+    const ava = PHOTO ? `<img src="${PHOTO}" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none">`
+      : '<div style="width:56px;height:56px;border-radius:50%;background:#2bb3a3;color:#fff;font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">А</div>';
     ov.innerHTML = `<div style="color:#2bb3a3;font-weight:600;font-size:14px">Финансы с Арайлым</div>
       <h1 style="font-size:26px;line-height:1.2">Ваши деньги под контролем: для бизнеса и для семьи</h1>
       <p style="font-size:16px;color:var(--text,#fff)">Отправляете чеки боту в Telegram, я веду учет и раз в месяц показываю: сколько заработали, куда ушли деньги и что улучшить.</p>
       ${CTA_BTN}
-      <div class="demo-card" style="cursor:default;display:flex;gap:14px;align-items:flex-start">
-        ${PHOTO ? `<img src="${PHOTO}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;flex:none">` : '<div style="width:64px;height:64px;border-radius:50%;background:#2bb3a3;color:#fff;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">А</div>'}
-        <div><b style="font-size:16px">ИИ только инструмент. Думает финансист</b>
-        <span>Арайлым, бухгалтер и финансовый аналитик.<br>
-        🤖 <strong style="color:var(--text,#fff)">ИИ</strong> читает чеки и голосовые, раскладывает расходы по статьям.<br>
-        👩‍💼 <strong style="color:var(--text,#fff)">Я</strong> проверяю каждую цифру, сверяю выписки, нахожу пропущенное, задаю вопросы и раз в месяц говорю, что улучшить: где утекают деньги, что сократить, как копить.</span></div></div>
-      <div class="demo-card" style="cursor:default"><b style="font-size:16px">Привычка, а не таблица</b>
-        <span>Учет держится на маленьких шагах:<br>
-        👀 <strong style="color:var(--text,#fff)">Заметно.</strong> Купили, сразу фото чека боту: 10 секунд.<br>
-        👌 <strong style="color:var(--text,#fff)">Просто.</strong> Можно голосом, по-русски или по-казахски, без таблиц.<br>
-        😊 <strong style="color:var(--text,#fff)">Приятно.</strong> В приложении сразу видно, сколько осталось до лимита и куда уходят деньги.<br>
-        🔁 <strong style="color:var(--text,#fff)">Не бросается.</strong> Раз в месяц я разбираю выписки, нахожу пропущенное и присылаю итог.</span></div>
-      <h2 style="margin:6px 0 0;font-size:18px">Посмотрите пример</h2>
-      <p>Выберите, что ближе вам. Внутри можно нажимать все кнопки: так будет выглядеть ваше приложение.</p>
-      <button class="demo-card" data-m="biz"><b>Бизнес: услуги</b><span>Салон, студия, клиника: что сегодня, касса за день, чеки и накладные через бота, закупка, прибыль, ДДС, сотрудники, бюджет. Можно посмотреть глазами собственника, администратора и финансиста. Позже доступ можно дать и вашему бухгалтеру, финансисту, управляющему или другим сотрудникам: каждый видит только свое. Обсуждается лично.</span></button>
-      <button class="demo-card" data-m="shop"><b>Бизнес: торговля</b><span>Магазин, Kaspi Магазин, опт: продажи за день, касса, накладные поставщиков через бота, остатки и что заказать, наценка и прибыль, деньги в товаре, ДДС, продавцы и их процент, кредит на товар. Можно посмотреть глазами собственника, продавца и финансиста. Позже доступ можно дать и вашему бухгалтеру, финансисту, управляющему или другим сотрудникам: каждый видит только свое. Обсуждается лично.</span></button>
-      <button class="demo-card" data-m="self"><b>Для себя</b><span>Личные финансы: сколько пришло и куда ушло, траты по группам, дети, кредиты и рассрочки, лимиты, обязательные платежи. Расходы отправляете боту текстом, голосом или фото чека.</span></button>
-      <p>Бизнес и личные финансы подключаются отдельно. Если нужно и то и другое, можно объединить в одном приложении: видно и прибыль бизнеса, и сколько владелец забирает и тратит на семью.</p>
-      <button class="btn sec" id="demoPrice">Сколько стоит</button>
+      <h2 style="margin:8px 0 0;font-size:18px">Посмотрите пример</h2>
+      <p>Нажмите, внутри работают все кнопки. Цифры и имена вымышленные.</p>
+      <button class="demo-card demo-pick" data-m="biz"><b>💇 Бизнес: услуги</b><span>Салон, студия, клиника: выручка за день, прибыль, сотрудники и их процент</span></button>
+      <button class="demo-card demo-pick" data-m="shop"><b>🛍️ Бизнес: торговля</b><span>Магазин, Kaspi Магазин, опт: продажи, остатки и что заказать, наценка</span></button>
+      <button class="demo-card demo-pick" data-m="self"><b>👨‍👩‍👧 Для себя</b><span>Личные финансы: куда уходят деньги, лимиты, кредиты, цели</span></button>
+      <div class="demo-accs">
+        ${acc('🙋‍♀️ Почему со мной', `<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:8px">${ava}<div><b style="color:var(--text,#fff)">Арайлым</b><br>бухгалтер и финансовый аналитик</div></div>
+          <b style="color:var(--text,#fff)">ИИ только инструмент. Думает финансист.</b><br>
+          🤖 ИИ читает чеки и голосовые, раскладывает расходы по статьям.<br>
+          👩‍💼 Я проверяю каждую цифру, сверяю выписки, нахожу пропущенное, задаю вопросы и раз в месяц говорю, что улучшить: где утекают деньги, что сократить, как копить.`)}
+        ${acc('⚙️ Как это работает', `<ol style="margin:0;padding-left:20px">
+          <li><b style="color:var(--text,#fff)">Подключаю.</b> Настраиваю бота и приложение под вас, разбираю выписки за выбранный период.</li>
+          <li><b style="color:var(--text,#fff)">Вы отправляете чеки боту.</b> Фото, текстом или голосом, по-русски или по-казахски: 10 секунд.</li>
+          <li><b style="color:var(--text,#fff)">Я сверяю выписки.</b> Нахожу пропущенное, по непонятным платежам задаю вопросы прямо в приложении.</li>
+          <li><b style="color:var(--text,#fff)">Раз в месяц итог.</b> Сколько пришло, куда ушло, сколько осталось и что улучшить.</li></ol>`)}
+        ${acc('💰 Сколько стоит', PRICE)}
+      </div>
+      <h2 style="margin:8px 0 0;font-size:18px">Вопросы и ответы</h2>
+      <div class="demo-accs">${FAQ.map(([q, a]) => acc(q, a)).join('')}</div>
       ${CTA_BTN}
       <p style="font-size:13px">Это демонстрационная версия: все показатели и имена вымышлены, изменения не сохраняются. После подключения в приложении будут ваши данные, а учет буду вести я.</p>`;
     document.body.appendChild(ov);
     ov.querySelectorAll('[data-m]').forEach(b => b.onclick = () => choose(b.dataset.m));
-    ov.querySelector('#demoPrice').onclick = showPrice;
   }
 
   function bar() {
