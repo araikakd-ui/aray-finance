@@ -76,6 +76,31 @@
   .final p{color:#d9f3ef;margin:0 0 18px}
   footer{padding:20px 0 40px;font-size:13px;color:var(--hint);text-align:center}
   @media (min-width:600px){h1{font-size:38px}.split{grid-template-columns:1fr 1fr}}
+  .hero-pic{display:none}
+  @media (min-width:960px){
+    .wrap{max-width:1120px;padding:0 32px}
+    section{padding:56px 0 8px}
+    h1{font-size:50px}
+    h2{font-size:30px;margin-bottom:20px}
+    .lead{font-size:19px;max-width:560px}
+    .hero{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center;padding-top:64px}
+    .hero-btns{display:flex;gap:12px;max-width:560px}
+    .hero-btns .btn{margin-top:0}
+    .hero-pic{display:flex;justify-content:center}
+    .phone{width:300px;border-radius:40px;border:10px solid #12161c;overflow:hidden;box-shadow:0 30px 60px rgba(18,22,28,.22);background:#12161c}
+    .phone img{display:block;width:100%}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .gets{grid-template-columns:repeat(4,1fr);gap:14px}
+    .get{padding:18px}
+    ol.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+    ol.steps li{padding:46px 0 0 0}
+    .demos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .demo{margin-bottom:0;height:100%}
+    .prices{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:16px;align-items:start}
+    .faq{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;align-items:start}
+    .final{text-align:center;padding:40px}
+    .final .btn{max-width:420px;margin:0 auto}
+  }
 </style>
 </head>
 <body>
@@ -85,18 +110,19 @@
 </div></header>
 
 <main class="wrap">
-  <section>
+  <section class="hero"><div class="hero-txt">
     <div style="color:var(--teal);font-weight:700;font-size:15px;margin-bottom:8px">EsepDos · учет денег</div>
     <h1>Деньги бизнеса и семьи под контролем</h1>
     <p class="lead">Отправляете чеки боту в Telegram, ваш финансист ведет учет и раз в месяц показывает: сколько заработали, куда ушли деньги и что улучшить. Без таблиц и программ.</p>
-    <a class="btn btn-gold" href="#" data-cta>Хочу такое же приложение</a>
-    <a class="btn btn-ghost" href="#demo">Посмотреть демо</a>
-  </section>
+    <div class="hero-btns"><a class="btn btn-gold" href="#" data-cta>Хочу такое же приложение</a>
+    <a class="btn btn-ghost" href="#demo">Посмотреть демо</a></div>
+  </div>
+  <div class="hero-pic"><div class="phone"><img src="demo-phone.jpg" alt="Приложение EsepDos: сводка за день"></div></div></section>
 
   <section>
     <h2>Кто стоит за EsepDos</h2>
-    <div class="card">
-      <div class="me"><div class="ava" id="ava">А</div><div><b>Арайлым Ахметова</b><span class="muted">основатель EsepDos, бухгалтер и финансовый аналитик</span></div></div>
+    <div class="two"><div class="card">
+      <div class="me"><div class="ava" id="ava">А</div><div><b>Арайлым Ахметова</b><span class="muted">автор EsepDos, бухгалтер и финансовый аналитик</span></div></div>
       <ul class="facts">
         <li><b>12 лет</b> в бухгалтерии и финансах</li>
         <li>Главный бухгалтер в производстве, торговле и логистике</li>
@@ -110,7 +136,7 @@
     <div class="card">
       <h3>Почему я это делаю</h3>
       <p style="margin:0">Я люблю, когда в деньгах порядок. Не таблица ради таблицы, а когда человек открывает телефон и за минуту понимает, сколько заработал и куда ушло. Ради этого я сделала свое приложение и под каждого клиента настраиваю его отдельно. Мне важно помогать людям понимать свои деньги, а не просто сдавать отчеты. К вашему делу я отношусь как к своему.</p>
-    </div>
+    </div></div>
   </section>
 
   <section>
@@ -144,9 +170,9 @@
   <section id="demo">
     <h2>Посмотрите демо</h2>
     <p class="muted" style="margin-top:-6px">Так будет выглядеть ваше приложение. Внутри работают все кнопки, цифры и имена вымышленные.</p>
-    <a class="demo" href="demo.html?m=biz"><div class="ic">💇</div><div><b>Бизнес: услуги</b><span>Салон, студия, клиника: выручка за день, прибыль, сотрудники и их процент</span></div><div class="arr">›</div></a>
+    <div class="demos"><a class="demo" href="demo.html?m=biz"><div class="ic">💇</div><div><b>Бизнес: услуги</b><span>Салон, студия, клиника: выручка за день, прибыль, сотрудники и их процент</span></div><div class="arr">›</div></a>
     <a class="demo" href="demo-shop.html?m=shop"><div class="ic">🛍️</div><div><b>Бизнес: торговля</b><span>Магазин, Kaspi Магазин, опт: продажи, остатки и что заказать, наценка</span></div><div class="arr">›</div></a>
-    <a class="demo" href="demo.html?m=self"><div class="ic">👨‍👩‍👧</div><div><b>Для себя</b><span>Личные финансы: куда уходят деньги, лимиты, кредиты, цели</span></div><div class="arr">›</div></a>
+    <a class="demo" href="demo.html?m=self"><div class="ic">👨‍👩‍👧</div><div><b>Для себя</b><span>Личные финансы: куда уходят деньги, лимиты, кредиты, цели</span></div><div class="arr">›</div></a></div>
     <p class="muted" style="font-size:14px">Бизнес и личные финансы подключаются отдельно. Если нужно и то и другое, объединяем в одном приложении.</p>
   </section>
 
@@ -157,7 +183,7 @@
 
   <section id="price">
     <h2>Сколько стоит</h2>
-    <div class="card">
+    <div class="prices"><div class="card">
       <h3>Внедрение (разово)</h3>
       <p class="muted" style="margin:0 0 4px;font-size:14px">Подключаем к боту и приложению, настраиваем статьи расходов, разбираем выписки за выбранный период, вносим кредиты и обязательные платежи, показываем, как всем пользоваться.</p>
       <table>
@@ -187,11 +213,12 @@
         <tr><td>Бухгалтерия: налоговая отчетность и ее сдача</td><td>по&nbsp;договоренности</td></tr>
         <tr><td>Финансовая модель (прибыль, точка безубыточности, план на год)</td><td>от&nbsp;200&nbsp;000&nbsp;тг</td></tr>
       </table>
-    </div>
+    </div></div>
   </section>
 
   <section id="faq">
     <h2>Вопросы и ответы</h2>
+    <div class="faq">
     <details><summary>Нужно что-то устанавливать?</summary><div class="b">Нет. Бот и приложение открываются прямо в Telegram, на телефоне и на компьютере.</div></details>
     <details><summary>Сколько времени это занимает у меня?</summary><div class="b">Купили, сразу фото чека боту: 10 секунд. Раз в месяц ответить на вопросы финансиста по непонятным платежам: 10-15 минут.</div></details>
     <details><summary>Я забываю отправлять чеки. Это сработает?</summary><div class="b">Да. Каждый месяц финансист сверяет выписки банков и находит все, что не попало через бота. Учет не рассыпается, даже если вы пропустили неделю.</div></details>
@@ -202,6 +229,7 @@
     <details><summary>Вы сдаете налоговую отчетность?</summary><div class="b">EsepDos это управленческий учет: сколько вы зарабатываете, куда уходят деньги и что улучшить. Бухгалтерия и сдача налоговых отчетов в сопровождение не входят. Если нужно, можем взять и их: стоимость обсуждается отдельно.</div></details>
     <details><summary>От чего зависит цена?</summary><div class="b">Личные финансы по прайсу. Для бизнеса в прайсе цена «от»: для небольшого бизнеса с одной точкой. Если точек, сотрудников или операций больше, цена выше: точную сумму называем до начала работы, и без вашего согласия она не меняется. Если нужна доработка приложения под ваш бизнес (свои отчеты, связь с вашей программой учета), она обсуждается и считается отдельно.</div></details>
     <details><summary>Можно начать прямо с сегодняшнего дня?</summary><div class="b">Учет можно вести с сегодняшнего дня, но для внедрения нужна история за 2 прошлых месяца. Без нее не видно, какие у вас обычные доходы и расходы, и не из чего поставить план и лимиты. Есть два варианта:<br>1. <b>Выписки.</b> Вы присылаете выписки банков за 2 месяца (или с января), мы их разбираем. Это и есть внедрение по прайсу.<br>2. <b>Готовые отчеты (для бизнеса).</b> Если у бизнеса уже есть ОПиУ или ДДС (в Excel или от бухгалтера), присылаете их, мы переносим в приложение, и начинаем сразу с оплаченного месяца. Так дешевле: оплачиваете только настройку приложения, без разбора выписок, от&nbsp;25&nbsp;000&nbsp;тг.</div></details>
+  </div>
   </section>
 
   <section id="privacy">
