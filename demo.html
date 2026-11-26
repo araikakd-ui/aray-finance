@@ -323,9 +323,9 @@
     <p style="margin:10px 0 0">Позже доступ можно дать и вашему бухгалтеру, финансисту, управляющему или другим сотрудникам: каждый видит только свое. Обсуждается лично.</p></div>`;
 
   // Куда ведет кнопка «Хочу такое же приложение» и фото для блока «Учет ведет живой финансист»
-  const CONTACT = '';   // ссылка t.me/... с готовым сообщением, задается ниже
+  const CONTACT = 'https://t.me/arailym_amerzhan';   // личный Telegram Арайлым; когда клиентов станет много, отдельный бот
   const PHOTO = '';     // файл фото рядом с demo.html, например 'arailym.jpg'
-  const CTA_TEXT = 'Здравствуйте! Посмотрела демо «Финансы с Арайлым», хочу подключить такое же приложение.';
+  const CTA_TEXT = 'Здравствуйте! Хочу подключить такое же приложение, как в демо «Финансы с Арайлым».';
   const ctaUrl = () => CONTACT + (CONTACT.includes('?') ? '&' : '?') + 'text=' + encodeURIComponent(CTA_TEXT);
   const CTA_BTN = !CONTACT ? '' : `<a class="btn demo-cta" href="#" data-cta style="display:block;text-align:center;text-decoration:none;background:#f4c542;color:#1a1a1a;font-weight:700;font-size:17px;padding:15px 12px;border-radius:14px;box-shadow:0 4px 14px rgba(244,197,66,.25)">Хочу такое же приложение</a>`;
   document.addEventListener('click', e => { const a = e.target.closest('[data-cta]'); if (!a) return; e.preventDefault(); window.open(ctaUrl(), '_blank'); });
