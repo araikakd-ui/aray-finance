@@ -322,9 +322,17 @@
     <table><tr><td>ОПиУ и ДДС бизнеса в Excel каждый месяц</td><td>+15 000 тг</td></tr><tr><td>Финансовая модель (прибыль, точка безубыточности, план на год)</td><td>от 100 000 тг</td></tr></table>
     <p style="margin:10px 0 0">Позже доступ можно дать и вашему бухгалтеру, финансисту, управляющему или другим сотрудникам: каждый видит только свое. Обсуждается лично.</p></div>`;
 
+  // Куда ведет кнопка «Хочу такое же приложение» и фото для блока «Учет ведет живой финансист»
+  const CONTACT = '';   // ссылка t.me/... с готовым сообщением, задается ниже
+  const PHOTO = '';     // файл фото рядом с demo.html, например 'arailym.jpg'
+  const CTA_TEXT = 'Здравствуйте! Посмотрела демо «Финансы с Арайлым», хочу подключить такое же приложение.';
+  const ctaUrl = () => CONTACT + (CONTACT.includes('?') ? '&' : '?') + 'text=' + encodeURIComponent(CTA_TEXT);
+  const CTA_BTN = !CONTACT ? '' : `<a class="btn demo-cta" href="#" data-cta style="display:block;text-align:center;text-decoration:none;background:#f4c542;color:#1a1a1a;font-weight:700;font-size:17px;padding:15px 12px;border-radius:14px;box-shadow:0 4px 14px rgba(244,197,66,.25)">Хочу такое же приложение</a>`;
+  document.addEventListener('click', e => { const a = e.target.closest('[data-cta]'); if (!a) return; e.preventDefault(); window.open(ctaUrl(), '_blank'); });
+
   function showPrice() {
     const ov = document.createElement('div'); ov.className = 'demo-ov'; ov.style.justifyContent = 'flex-start';
-    ov.innerHTML = `<h1>Сколько стоит</h1>${PRICE}<button class="btn" id="demoClose">Назад к примеру</button>`;
+    ov.innerHTML = `<h1>Сколько стоит</h1>${PRICE}${CTA_BTN}<button class="btn sec" id="demoClose">Назад к примеру</button>`;
     document.body.appendChild(ov); ov.querySelector('#demoClose').onclick = () => ov.remove();
   }
   window.demoPrice = showPrice;
@@ -338,19 +346,30 @@
 
   function chooser() {
     const ov = document.createElement('div'); ov.className = 'demo-ov';
-    ov.innerHTML = `<h1>Финансы с Арайлым</h1>
-      <div style="font-size:20px;font-weight:700;line-height:1.3">Деньги любят счет.<br><span style="color:#2bb3a3">Хотите копить, начните считать расходы.</span></div>
+    ov.innerHTML = `<div style="color:#2bb3a3;font-weight:600;font-size:14px">Финансы с Арайлым</div>
+      <h1 style="font-size:26px;line-height:1.2">Ваши деньги под контролем: бизнес и семья в одном приложении</h1>
+      <p style="font-size:16px;color:var(--text,#fff)">Отправляете чеки боту в Telegram, я веду учет и раз в месяц показываю: сколько заработали, куда ушли деньги и что улучшить.</p>
+      ${CTA_BTN}
+      <div class="demo-card" style="cursor:default;display:flex;gap:14px;align-items:flex-start">
+        ${PHOTO ? `<img src="${PHOTO}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;flex:none">` : '<div style="width:64px;height:64px;border-radius:50%;background:#2bb3a3;color:#fff;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">А</div>'}
+        <div><b style="font-size:16px">ИИ только инструмент. Думает финансист</b>
+        <span>Арайлым, бухгалтер и финансовый аналитик.<br>
+        🤖 <strong style="color:var(--text,#fff)">ИИ</strong> читает чеки и голосовые, раскладывает расходы по статьям.<br>
+        👩‍💼 <strong style="color:var(--text,#fff)">Я</strong> проверяю каждую цифру, сверяю выписки, нахожу пропущенное, задаю вопросы и раз в месяц говорю, что улучшить: где утекают деньги, что сократить, как копить.</span></div></div>
       <div class="demo-card" style="cursor:default"><b style="font-size:16px">Привычка, а не таблица</b>
         <span>Учет держится на маленьких шагах:<br>
         👀 <strong style="color:var(--text,#fff)">Заметно.</strong> Купили, сразу фото чека боту: 10 секунд.<br>
         👌 <strong style="color:var(--text,#fff)">Просто.</strong> Можно голосом, по-русски или по-казахски, без таблиц.<br>
         😊 <strong style="color:var(--text,#fff)">Приятно.</strong> В приложении сразу видно, сколько осталось до лимита и куда уходят деньги.<br>
         🔁 <strong style="color:var(--text,#fff)">Не бросается.</strong> Раз в месяц я разбираю выписки, нахожу пропущенное и присылаю итог.</span></div>
-      <p>Ниже пример, как будет выглядеть ваше приложение. Все цифры и имена вымышленные, изменения не сохраняются.</p>
+      <h2 style="margin:6px 0 0;font-size:18px">Посмотрите пример</h2>
+      <p>Выберите, что ближе вам. Внутри можно нажимать все кнопки: так будет выглядеть ваше приложение.</p>
       <button class="demo-card" data-m="biz"><b>Бизнес: услуги</b><span>Салон, студия, клиника: что сегодня, касса за день, чеки и накладные через бота, закупка, прибыль, ДДС, сотрудники, бюджет и личные финансы владельца. Можно посмотреть глазами собственника, администратора и финансиста. Позже доступ можно дать и вашему бухгалтеру, финансисту, управляющему или другим сотрудникам: каждый видит только свое. Обсуждается лично.</span></button>
       <button class="demo-card" data-m="shop"><b>Бизнес: торговля</b><span>Магазин, Kaspi Магазин, опт: продажи за день, касса, накладные поставщиков через бота, остатки и что заказать, наценка и прибыль, деньги в товаре, ДДС, продавцы и их процент, кредит на товар, личные финансы владельца. Можно посмотреть глазами собственника, продавца и финансиста. Позже доступ можно дать и вашему бухгалтеру, финансисту, управляющему или другим сотрудникам: каждый видит только свое. Обсуждается лично.</span></button>
       <button class="demo-card" data-m="self"><b>Для себя</b><span>Личные финансы: сколько пришло и куда ушло, траты по группам, дети, кредиты и рассрочки, лимиты, обязательные платежи. Расходы отправляете боту текстом, голосом или фото чека.</span></button>
-      <button class="btn sec" id="demoPrice">Сколько стоит</button>`;
+      <button class="btn sec" id="demoPrice">Сколько стоит</button>
+      ${CTA_BTN}
+      <p style="font-size:13px">Это демонстрационная версия: все показатели и имена вымышлены, изменения не сохраняются. После подключения в приложении будут данные вашего бизнеса и семьи, а учет буду вести я.</p>`;
     document.body.appendChild(ov);
     ov.querySelectorAll('[data-m]').forEach(b => b.onclick = () => choose(b.dataset.m));
     ov.querySelector('#demoPrice').onclick = showPrice;
@@ -360,9 +379,10 @@
     if (MODE === 'self') document.querySelectorAll('#app .card').forEach(c => { if (/Оплатила за бизнес/.test(c.textContent) && c.style.display !== 'none') c.style.display = 'none'; });
     const app = document.getElementById('app'); if (!app || app.querySelector('.demo-bar')) return;
     const b = document.createElement('div'); b.className = 'demo-bar';
-    const roles = MODE !== 'self' ? `<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">${[['owner', 'Собственник'], ['admin', SHOP ? 'Продавец' : 'Администратор'], ['fin', 'Финансист']].map(([k, t]) => `<button data-r="${k}" class="${ROLE === k ? 'on' : ''}">${t}</button>`).join('')}</div>` : '';
+    const roles = MODE !== 'self' ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${[['owner', 'Собственник'], ['admin', SHOP ? 'Продавец' : 'Администратор'], ['fin', 'Финансист']].map(([k, t]) => `<button data-r="${k}" class="${ROLE === k ? 'on' : ''}">${t}</button>`).join('')}</div>` : '<span></span>';
     b.style.flexWrap = 'wrap';
-    b.innerHTML = `<span><b>Пример</b></span><span style="display:flex;gap:4px"><button data-m="biz" class="${MODE === 'biz' ? 'on' : ''}">Услуги</button><button data-m="shop" class="${MODE === 'shop' ? 'on' : ''}">Магазин</button><button data-m="self" class="${MODE === 'self' ? 'on' : ''}">Для себя</button><button id="demoP">Цены</button></span>${roles ? `<div style="width:100%">${roles}</div>` : ''}`;
+    b.innerHTML = `<span><b>Пример</b></span><span style="display:flex;gap:4px"><button data-m="biz" class="${MODE === 'biz' ? 'on' : ''}">Услуги</button><button data-m="shop" class="${MODE === 'shop' ? 'on' : ''}">Магазин</button><button data-m="self" class="${MODE === 'self' ? 'on' : ''}">Для себя</button><button id="demoP">Цены</button></span>
+      <div style="width:100%;display:flex;gap:6px;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap">${roles}${CONTACT ? '<button data-cta style="background:#f4c542;color:#1a1a1a;font-weight:700">Хочу так же</button>' : ''}</div>`;
     app.prepend(b);
     b.querySelectorAll('[data-m]').forEach(x => x.onclick = () => { if (x.dataset.m !== MODE) choose(x.dataset.m); });
     b.querySelector('#demoP').onclick = showPrice;
