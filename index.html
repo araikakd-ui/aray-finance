@@ -1997,13 +1997,13 @@ function renderDoc(d) {
       <label class="f"><span>Комментарий</span><textarea name="comment" ${ro}>${esc(d.comment)}</textarea></label>
     </div>
     <h2>Строки документа · ${money(d.linesSum)}</h2>
-    <div class="card"><table><tbody>${d.lines.map(l => `
+    <div class="card"><table><tbody>${d.lines.map((l, i) => `
       <tr><td>${esc(l.name)}${d.canEdit
-          ? `<select data-good="${l.no - 1}" style="margin-top:4px;padding:6px;font-size:13px;width:100%"><option value="${esc(l.goodId)}">${l.goodId ? 'Altegio: ' + esc(l.goodTitle) : '— нет в Altegio —'}</option></select>`
+          ? `<select data-good="${i}" style="margin-top:4px;padding:6px;font-size:13px;width:100%"><option value="${esc(l.goodId)}">${l.goodId ? 'Altegio: ' + esc(l.goodTitle) : '— нет в Altegio —'}</option></select>`
           : `<div class="alt ${l.goodId ? 'yes' : 'no'}">${l.goodId ? 'Altegio: ' + esc(l.goodTitle) : 'нет в Altegio'}</div>`}
-        ${d.canEdit ? `<select data-line="${l.no - 1}" style="margin-top:4px;padding:6px;font-size:13px">${catOpts(l.category)}</select>` : `<div class="muted">${esc(l.category)}</div>`}</td>
+        ${d.canEdit ? `<select data-line="${i}" style="margin-top:4px;padding:6px;font-size:13px">${catOpts(l.category)}</select>` : `<div class="muted">${esc(l.category)}</div>`}</td>
       <td class="n">${d.canEdit
-          ? `<input data-qty="${l.no - 1}" value="${esc(l.qty)}" inputmode="decimal" style="width:64px;padding:4px 6px;font-size:13px;text-align:right"> ${esc(unitRu(l.unit))}`
+          ? `<input data-qty="${i}" value="${esc(l.qty)}" inputmode="decimal" style="width:64px;padding:4px 6px;font-size:13px;text-align:right"> ${esc(unitRu(l.unit))}`
           : `${esc(l.qty)} ${esc(unitRu(l.unit))}`}<div class="muted">× ${money(l.price)}</div></td>
       <td class="n"><b>${money(l.sum)}</b></td></tr>`).join('') || '<tr><td class="muted">Строк нет</td></tr>'}</tbody></table></div>
     ${d.altegio ? `<div class="card"><b>Altegio:</b> ${esc(d.altegio)}</div>` : ''}
