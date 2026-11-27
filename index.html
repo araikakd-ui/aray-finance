@@ -1998,9 +1998,13 @@ function renderDoc(d) {
     </div>
     <h2>Строки документа · ${money(d.linesSum)}</h2>
     <div class="card"><table><tbody>${d.lines.map(l => `
-      <tr><td>${esc(l.name)}<div class="alt ${l.goodId ? 'yes' : 'no'}">${l.goodId ? 'Altegio: ' + esc(l.goodTitle) : 'нет в Altegio'}</div>
+      <tr><td>${esc(l.name)}${d.canEdit
+          ? `<select data-good="${l.no - 1}" style="margin-top:4px;padding:6px;font-size:13px;width:100%"><option value="${esc(l.goodId)}">${l.goodId ? 'Altegio: ' + esc(l.goodTitle) : '— нет в Altegio —'}</option></select>`
+          : `<div class="alt ${l.goodId ? 'yes' : 'no'}">${l.goodId ? 'Altegio: ' + esc(l.goodTitle) : 'нет в Altegio'}</div>`}
         ${d.canEdit ? `<select data-line="${l.no - 1}" style="margin-top:4px;padding:6px;font-size:13px">${catOpts(l.category)}</select>` : `<div class="muted">${esc(l.category)}</div>`}</td>
-      <td class="n">${esc(l.qty)} ${esc(unitRu(l.unit))}<div class="muted">× ${money(l.price)}</div></td>
+      <td class="n">${d.canEdit
+          ? `<input data-qty="${l.no - 1}" value="${esc(l.qty)}" inputmode="decimal" style="width:64px;padding:4px 6px;font-size:13px;text-align:right"> ${esc(unitRu(l.unit))}`
+          : `${esc(l.qty)} ${esc(unitRu(l.unit))}`}<div class="muted">× ${money(l.price)}</div></td>
       <td class="n"><b>${money(l.sum)}</b></td></tr>`).join('') || '<tr><td class="muted">Строк нет</td></tr>'}</tbody></table></div>
     ${d.altegio ? `<div class="card"><b>Altegio:</b> ${esc(d.altegio)}</div>` : ''}
     <div class="btns">
@@ -2014,10 +2018,24 @@ function renderDoc(d) {
     document.querySelectorAll('#form [name]').forEach(el => f[el.name] = el.value.trim());
     return f;
   };
+  // Строка: товар Altegio и количество (например, пластырь купили 2 пачки, а приходуем 66 наборов)
   const lines = () => d.lines.map((l, i) => {
-    const sel = document.querySelector(`[data-line="${i}"]`);
-    return { name: l.name, qty: l.qty, unit: l.unit, price: l.price, sum: l.sum, category: sel ? sel.value : l.category, goodId: l.goodId };
+    const sel = document.querySelector(`[data-line="${i}"]`), gsel = document.querySelector(`[data-good="${i}"]`), qin = document.querySelector(`[data-qty="${i}"]`);
+    const qty = qin ? (parseFloat(String(qin.value).replace(',', '.').replace(/\s/g, '')) || l.qty) : l.qty;
+    const goodId = gsel ? gsel.value : l.goodId;
+    const goodTitle = gsel ? (gsel.value ? gsel.selectedOptions[0].text.replace(/^Altegio: /, '') : '') : l.goodTitle;
+    const price = qty && Number(qty) !== Number(l.qty) ? Math.round(Number(l.sum) / qty * 100) / 100 : l.price;
+    return { name: l.name, qty, unit: l.unit, price, sum: l.sum, category: sel ? sel.value : l.category, goodId, goodTitle };
   });
+  // Список товаров Altegio для выбора в строках (грузится один раз)
+  const gsels = document.querySelectorAll('[data-good]');
+  if (gsels.length) (window.GOODS_PICK ? Promise.resolve(window.GOODS_PICK) : api('goods').then(r => (window.GOODS_PICK = r.goods || [])))
+    .then(list => gsels.forEach(s => {
+      const cur = s.value, curT = s.options[0].text.replace(/^Altegio: /, '');
+      s.innerHTML = '<option value="">— нет в Altegio —</option>' + list.map(g => `<option value="${esc(g.id)}">${esc(g.title)}</option>`).join('');
+      if (cur && !list.some(g => String(g.id) === String(cur))) s.insertAdjacentHTML('beforeend', `<option value="${esc(cur)}">${esc(curT)}</option>`);
+      s.value = cur;
+    })).catch(() => {});
   const act = async (btn, fn, okText) => {
     const b = document.getElementById(btn); if (!b) return;
     b.onclick = async () => {
@@ -2026,7 +2044,7 @@ function renderDoc(d) {
       catch (e) { haptic('error'); toast(e.message); b.disabled = false; if (!document.body.contains(b)) openDoc(d.id); }
     };
   };
-  document.querySelectorAll('#form [name], [data-line], #reason').forEach(el => el.addEventListener('input', () => { DIRTY = true; }));
+  document.querySelectorAll('#form [name], [data-line], [data-good], [data-qty], #reason').forEach(el => el.addEventListener('input', () => { DIRTY = true; }));
   act('save', () => api('update', { id: d.id, fields: form(), lines: d.canEdit ? lines() : undefined }), 'Сохранено');
   const ap = document.getElementById('approve');
   if (ap) ap.onclick = () => {
