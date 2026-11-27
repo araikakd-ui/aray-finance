@@ -1698,7 +1698,7 @@ function qHtml(t) {
     <div class="row"><span>${esc([q.date, q.who].filter(Boolean).join(', ') || q.text.slice(0, 60))}${q.sum ? ' · ' + tg0(q.sum) : ''}</span><button class="chip" data-qedit>изменить</button></div>
     <div class="muted">✓ ${esc([q.answer, q.comment].filter(Boolean).join(': '))}${q.photo ? ' · 📎' : ''}${q.by ? ' · ' + esc(q.by) + ' ' + esc(q.at) : ''}</div></div>`;
   const doneBlock = done.length ? `<div style="border-top:1px solid var(--line);padding:8px 0;cursor:pointer" data-qopen class="row"><span class="muted">${QOPEN ? '▾' : '▸'} Отвечено (${done.length})</span><span class="muted" style="font-size:12px">${QOPEN ? 'свернуть' : 'показать'}</span></div>${QOPEN ? done.map(row).join('') : ''}` : '';
-  return `<h2>❓ Вопросы от ${esc(window.FIN_NAME || 'Арайлым')}${open.length ? ` <span class="muted" style="font-weight:400">${open.length}</span>` : ''}</h2><div class="card">
+  return `<h2>❓ Вопросы от ${esc(window.FIN_FROM || 'Арайлым')}${open.length ? ` <span class="muted" style="font-weight:400">${open.length}</span>` : ''}</h2><div class="card">
     ${open.length ? `<div class="muted" style="margin-bottom:2px">Что это за операции? Нажмите подходящий ответ, комментарий и фото по желанию.</div>${open.map(card).join('')}` : '<div class="under">На все вопросы ответили ✓</div>'}${doneBlock}</div>`;
 }
 function bindQ() {
